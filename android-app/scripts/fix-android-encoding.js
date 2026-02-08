@@ -2,9 +2,11 @@
  * 修复 Android 构建在 CI（如 GitHub Actions）下中文乱码：
  * 强制 Gradle/Java 使用 UTF-8 编码
  */
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const androidDir = path.join(root, 'android')
 const gradlePropsPath = path.join(androidDir, 'gradle.properties')
