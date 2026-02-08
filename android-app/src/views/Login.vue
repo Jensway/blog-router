@@ -2,11 +2,11 @@
   <div class="login">
     <div class="card">
       <h1>共享中心</h1>
-      <p class="hint">请填写服务器地址和 API 令牌（在网页版「设置 → API 令牌」中创建）</p>
+      <p class="hint">请填写服务器地址和 API 令牌（在网页版「设置 → API 令牌」中创建）。手机与电脑需在同一 WiFi，地址填电脑局域网 IP 如 http://192.168.1.100:5000，不要填 localhost。</p>
       <form @submit.prevent="submit">
         <div class="field">
           <label>服务器地址</label>
-          <input v-model="baseURL" type="url" placeholder="https://你的服务器:5000" required />
+          <input v-model="baseURL" type="text" placeholder="http://192.168.1.x:5000 或 https://域名" required />
         </div>
         <div class="field">
           <label>API 令牌</label>

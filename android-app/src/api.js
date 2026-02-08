@@ -35,8 +35,19 @@ async function request(path, options = {}) {
     ...getAuthHeaders(),
     ...options.headers,
   }
-  const res = await fetch(url, { ...options, headers })
-  const text = await res.text()
+  let res, text
+  try {
+    res = await fetch(url, { ...options, headers })
+    text = await res.text()
+  } catch (e) {
+    const msg = (e && e.message) || ''
+    if (/failed to fetch|network|load failed/i.test(msg)) {
+      throw new Error(
+        '连接失败，请检查：① 服务器地址不要用 localhost，改用电脑局域网 IP（如 http://192.168.1.x:5000）或公网地址；② 手机与电脑是否在同一 WiFi；③ 电脑防火墙是否放行该端口。'
+      )
+    }
+    throw e
+  }
   if (!res.ok) {
     let msg = '请求失败'
     try {

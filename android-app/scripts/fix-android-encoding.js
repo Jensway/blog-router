@@ -70,4 +70,18 @@ for (const buildFile of [appBuildPath, appBuildKts]) {
   break
 }
 
+// 3. 允许 HTTP 连接（Android 9+ 默认禁止明文，会导致 failed to fetch）
+const manifestPath = path.join(androidDir, 'app', 'src', 'main', 'AndroidManifest.xml')
+if (fs.existsSync(manifestPath)) {
+  let manifest = fs.readFileSync(manifestPath, 'utf8')
+  if (!manifest.includes('usesCleartextTraffic')) {
+    manifest = manifest.replace(
+      /<application\s/,
+      '<application\n        android:usesCleartextTraffic="true"\n        '
+    )
+    fs.writeFileSync(manifestPath, manifest)
+    console.log('已允许 Android 明文流量 (usesCleartextTraffic)')
+  }
+}
+
 console.log('Android 编码修复完成')
