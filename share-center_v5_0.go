@@ -14,6 +14,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -2492,6 +2493,19 @@ func main() {
 		}
 
 		log.Printf("服务器启动: http://localhost:%d", port)
+		if ifaces, err := net.Interfaces(); err == nil {
+			for _, iface := range ifaces {
+				if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+					continue
+				}
+				addrs, _ := iface.Addrs()
+				for _, a := range addrs {
+					if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+						log.Printf("手机/局域网访问: http://%s:%d （请在手机 APP 中填写此地址）", ipnet.IP.String(), port)
+					}
+				}
+			}
+		}
 
 		go func() {
 			if err := app.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

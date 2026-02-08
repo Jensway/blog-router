@@ -72,15 +72,37 @@ for (const buildFile of [appBuildPath, appBuildKts]) {
 
 // 3. 允许 HTTP 连接（Android 9+ 默认禁止明文，会导致 failed to fetch）
 const manifestPath = path.join(androidDir, 'app', 'src', 'main', 'AndroidManifest.xml')
+const resXmlDir = path.join(androidDir, 'app', 'src', 'main', 'res', 'xml')
+const networkSecurityConfigPath = path.join(resXmlDir, 'network_security_config.xml')
+
 if (fs.existsSync(manifestPath)) {
+  // 3a. 添加 network_security_config.xml（Android 官方推荐方式）
+  const networkSecurityConfig = `<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+`
+  if (!fs.existsSync(resXmlDir)) fs.mkdirSync(resXmlDir, { recursive: true })
+  fs.writeFileSync(networkSecurityConfigPath, networkSecurityConfig)
+  console.log('已创建 network_security_config.xml（允许 HTTP）')
+
+  // 3b. 在 AndroidManifest 的 application 上启用明文 + 引用上述配置
   let manifest = fs.readFileSync(manifestPath, 'utf8')
-  if (!manifest.includes('usesCleartextTraffic')) {
-    manifest = manifest.replace(
-      /<application\s/,
-      '<application\n        android:usesCleartextTraffic="true"\n        '
-    )
+  const needCleartext = !manifest.includes('usesCleartextTraffic')
+  const needNetworkConfig = !manifest.includes('networkSecurityConfig')
+  if (needCleartext || needNetworkConfig) {
+    const parts = []
+    if (needCleartext) parts.push('android:usesCleartextTraffic="true"')
+    if (needNetworkConfig) parts.push('android:networkSecurityConfig="@xml/network_security_config"')
+    const toInsert = '\n        ' + parts.join('\n        ') + '\n        '
+    manifest = manifest.replace(/<application\s/, '<application' + toInsert)
     fs.writeFileSync(manifestPath, manifest)
-    console.log('已允许 Android 明文流量 (usesCleartextTraffic)')
+    console.log('已修改 AndroidManifest 允许明文流量')
   }
 }
 

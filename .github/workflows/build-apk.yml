@@ -32,10 +32,6 @@ jobs:
         working-directory: android-app
         run: npx cap add android
 
-      - name: 修复中文编码 (UTF-8)
-        working-directory: android-app
-        run: node scripts/fix-android-encoding.js
-
       - name: 构建前端
         working-directory: android-app
         run: npm run build
@@ -43,6 +39,10 @@ jobs:
       - name: 同步到 Android 工程
         working-directory: android-app
         run: npx cap sync android
+
+      - name: 修复编码与允许 HTTP（必须在 sync 之后执行，避免被覆盖）
+        working-directory: android-app
+        run: node scripts/fix-android-encoding.js
 
       - name: 安装 JDK 17
         uses: actions/setup-java@v4
