@@ -64,13 +64,22 @@ async function request(path, options = {}) {
   }
 }
 
+function ensureArray(data) {
+  if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.data)) return data.data
+  if (data && Array.isArray(data.posts)) return data.posts
+  if (data && Array.isArray(data.list)) return data.list
+  return []
+}
+
 export const api = {
   async session() {
     return request('/api/session')
   },
   async getPosts(params = {}) {
     const q = new URLSearchParams(params).toString()
-    return request('/api/posts' + (q ? '?' + q : ''))
+    const data = await request('/api/posts' + (q ? '?' + q : ''))
+    return ensureArray(data)
   },
   async getPost(id) {
     return request(`/api/posts/${id}`)

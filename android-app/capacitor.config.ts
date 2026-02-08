@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: '共享中心',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
+    // 用 http 避免 WebView 把页面当「安全来源」从而拦截对 http:// 服务器的请求（混合内容）
+    androidScheme: 'http',
   },
 };
 

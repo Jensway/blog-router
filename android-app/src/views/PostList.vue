@@ -8,7 +8,7 @@
     <div v-else-if="error" class="error">{{ error }}</div>
     <ul v-else class="list">
       <li v-for="p in posts" :key="p.id" class="item" @click="goPost(p.id)">
-        <span class="title">{{ p.title || '无标题' }}</span>
+        <span class="title">{{ postTitle(p) }}</span>
         <span class="meta">{{ p.updated_at || p.created_at }}</span>
       </li>
     </ul>
@@ -38,6 +38,12 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function postTitle(p) {
+  const t = (p && (p.title || p.Title || '')).trim()
+  if (t) return t
+  return '日志 #' + (p && p.id ? p.id : '')
 }
 
 function goPost(id) {
