@@ -1,0 +1,915 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+MT-6000 路由器 ShareCenter 编译部署工具 v2.1
+功能：
+1. 选择Go源文件并交叉编译为ARM64（编译前检查文件是否存在）
+2. 复制到部署路径并改名为share-center
+3. SSH连接路由器并重启服务
+"""
+
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox, scrolledtext
+import subprocess
+import threading
+import os
+import shutil
+import re
+import json
+from pathlib import Path
+from datetime import datetime
+
+# SSH支持
+try:
+    import paramiko
+
+    SSH_AVAILABLE = True
+except ImportError:
+    SSH_AVAILABLE = False
+
+# 配置文件路径
+CONFIG_FILE = "deploy_config.json"
+
+
+class ShareCenterDeployTool:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("MT-6000 ShareCenter 编译部署工具 v2.1")
+        self.root.geometry("900x800")
+        self.root.resizable(True, True)
+
+        # SSH连接对象
+        self.ssh_client = None
+        self.ssh_connected = False
+
+        # 变量
+        self.go_file_path = tk.StringVar()
+        self.output_file_name = tk.StringVar()
+        self.publish_path = tk.StringVar()  # 发布路径（Go文件目录）
+        self.deploy_path = tk.StringVar(value="Y:\\RouterApp\\ShareCenter")  # 部署路径
+
+        self.ssh_host = tk.StringVar(value="192.168.8.1")
+        self.ssh_port = tk.IntVar(value=22)
+        self.ssh_user = tk.StringVar(value="root")
+        self.ssh_password = tk.StringVar()
+        self.remote_dir = tk.StringVar(value="/tmp/mountd/disk1_part1/RouterApp/ShareCenter")
+        self.service_port = tk.IntVar(value=5000)
+
+        # 编译前检查选项
+        self.check_before_compile = tk.BooleanVar(value=True)
+        self.auto_backup = tk.BooleanVar(value=True)
+
+        # 加载配置
+        self.load_config()
+
+        self.create_ui()
+
+    def load_config(self):
+        """加载配置文件"""
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.publish_path.set(config.get('publish_path', ''))
+                    self.deploy_path.set(config.get('deploy_path', 'Y:\\RouterApp\\ShareCenter'))
+                    self.ssh_host.set(config.get('ssh_host', '192.168.8.1'))
+                    self.ssh_port.set(config.get('ssh_port', 22))
+                    self.ssh_user.set(config.get('ssh_user', 'root'))
+                    self.ssh_password.set(config.get('ssh_password', ''))
+                    self.remote_dir.set(config.get('remote_dir', '/tmp/mountd/disk1_part1/RouterApp/ShareCenter'))
+                    self.service_port.set(config.get('service_port', 5000))
+                    self.check_before_compile.set(config.get('check_before_compile', True))
+                    self.auto_backup.set(config.get('auto_backup', True))
+        except Exception as e:
+            print(f"加载配置失败: {e}")
+
+    def save_config(self):
+        """保存配置文件"""
+        try:
+            config = {
+                'publish_path': self.publish_path.get(),
+                'deploy_path': self.deploy_path.get(),
+                'ssh_host': self.ssh_host.get(),
+                'ssh_port': self.ssh_port.get(),
+                'ssh_user': self.ssh_user.get(),
+                'ssh_password': self.ssh_password.get(),
+                'remote_dir': self.remote_dir.get(),
+                'service_port': self.service_port.get(),
+                'check_before_compile': self.check_before_compile.get(),
+                'auto_backup': self.auto_backup.get()
+            }
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            self.log("✅ 配置已保存", "SUCCESS")
+        except Exception as e:
+            self.log(f"保存配置失败: {e}", "ERROR")
+
+    def create_ui(self):
+        """创建UI界面"""
+        # 路径设置区域
+        path_frame = ttk.LabelFrame(self.root, text="📁 路径设置")
+        path_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        # 发布路径
+        ttk.Label(path_frame, text="发布路径:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(path_frame, textvariable=self.publish_path, width=55).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(path_frame, text="浏览...", command=self.browse_publish_path).grid(row=0, column=2, padx=5, pady=5)
+        ttk.Label(path_frame, text="(Go源文件及编译输出目录)", foreground="gray").grid(row=0, column=3, padx=5, pady=5,
+                                                                                       sticky=tk.W)
+
+        # 部署路径
+        ttk.Label(path_frame, text="部署路径:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(path_frame, textvariable=self.deploy_path, width=55).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(path_frame, text="浏览...", command=self.browse_deploy_path).grid(row=1, column=2, padx=5, pady=5)
+        ttk.Label(path_frame, text="(网络共享目录)", foreground="gray").grid(row=1, column=3, padx=5, pady=5,
+                                                                             sticky=tk.W)
+
+        # 保存配置按钮
+        ttk.Button(path_frame, text="💾 保存配置", command=self.save_config).grid(row=2, column=1, pady=5, sticky=tk.E)
+
+        # 步骤选项卡
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        # 第1步：编译
+        compile_frame = ttk.Frame(notebook)
+        notebook.add(compile_frame, text="📦 第1步：交叉编译")
+        self.create_compile_ui(compile_frame)
+
+        # 第2步：本地部署
+        local_deploy_frame = ttk.Frame(notebook)
+        notebook.add(local_deploy_frame, text="📋 第2步：本地部署")
+        self.create_local_deploy_ui(local_deploy_frame)
+
+        # 第3步：SSH远程
+        ssh_frame = ttk.Frame(notebook)
+        notebook.add(ssh_frame, text="🚀 第3步：SSH重启")
+        self.create_ssh_ui(ssh_frame)
+
+        # 一键操作
+        quick_frame = ttk.LabelFrame(self.root, text="⚡ 快捷操作")
+        quick_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        ttk.Button(quick_frame, text="🔄 一键全流程（编译→部署→重启）",
+                   command=self.one_click_all, width=40).pack(pady=10)
+
+        # 日志区域
+        log_frame = ttk.LabelFrame(self.root, text="📋 执行日志")
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.log_text = scrolledtext.ScrolledText(log_frame, height=10, font=("Consolas", 9))
+        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # 配置日志颜色标签
+        self.log_text.tag_configure("SUCCESS", foreground="green")
+        self.log_text.tag_configure("ERROR", foreground="red")
+        self.log_text.tag_configure("WARNING", foreground="orange")
+        self.log_text.tag_configure("INFO", foreground="black")
+
+        ttk.Button(log_frame, text="清除日志", command=self.clear_log).pack(pady=5)
+
+    def create_compile_ui(self, parent):
+        """创建编译界面"""
+        # 文件选择
+        file_frame = ttk.LabelFrame(parent, text="源文件选择")
+        file_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        ttk.Label(file_frame, text="Go源文件:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(file_frame, textvariable=self.go_file_path, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(file_frame, text="选择文件...", command=self.browse_go_file).grid(row=0, column=2, padx=5, pady=5)
+
+        ttk.Label(file_frame, text="输出文件名:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(file_frame, textvariable=self.output_file_name, width=50).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(file_frame, text="检查文件", command=self.check_output_file).grid(row=1, column=2, padx=5, pady=5)
+
+        # 输出文件状态
+        self.output_file_status = ttk.Label(file_frame, text="", foreground="gray")
+        self.output_file_status.grid(row=2, column=1, columnspan=2, padx=5, pady=2, sticky=tk.W)
+
+        # 编译选项
+        option_frame = ttk.LabelFrame(parent, text="编译选项")
+        option_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        # 选项复选框
+        ttk.Checkbutton(option_frame, text="编译前检查文件是否存在",
+                        variable=self.check_before_compile).grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
+        ttk.Checkbutton(option_frame, text="覆盖前自动备份",
+                        variable=self.auto_backup).grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)
+
+        # 编译参数说明
+        info_text = "编译参数: GOOS=linux  GOARCH=arm64  CGO_ENABLED=0  -ldflags=\"-s -w\""
+        ttk.Label(option_frame, text=info_text, foreground="gray").grid(row=1, column=0, columnspan=2, padx=10, pady=5,
+                                                                        sticky=tk.W)
+
+        # 编译按钮
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(pady=20)
+
+        self.compile_btn = ttk.Button(btn_frame, text="🔨 开始编译", command=self.start_compile, width=20)
+        self.compile_btn.pack(side=tk.LEFT, padx=10)
+
+        self.compile_status = ttk.Label(btn_frame, text="", foreground="gray")
+        self.compile_status.pack(side=tk.LEFT, padx=10)
+
+    def create_local_deploy_ui(self, parent):
+        """创建本地部署界面"""
+        info_frame = ttk.LabelFrame(parent, text="部署说明")
+        info_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        info_text = """
+        本步骤将执行以下操作：
+        1. 将编译生成的文件（如 share-center-mt6000_v5.0_arm64）
+        2. 复制到部署路径（如 Y:\\RouterApp\\ShareCenter）
+        3. 并重命名为 share-center（替换原有文件）
+
+        注意：部署路径通常是路由器的网络共享目录
+        """
+        ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(padx=10, pady=5)
+
+        # 文件信息
+        file_frame = ttk.LabelFrame(parent, text="文件信息")
+        file_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        self.source_file_label = ttk.Label(file_frame, text="源文件: (请先完成编译)")
+        self.source_file_label.pack(anchor=tk.W, padx=10, pady=5)
+
+        self.target_file_label = ttk.Label(file_frame, text="目标文件: (等待部署)")
+        self.target_file_label.pack(anchor=tk.W, padx=10, pady=5)
+
+        self.deploy_file_status = ttk.Label(file_frame, text="", foreground="gray")
+        self.deploy_file_status.pack(anchor=tk.W, padx=10, pady=5)
+
+        # 部署按钮
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(pady=20)
+
+        ttk.Button(btn_frame, text="🔍 检查文件", command=self.check_deploy_files, width=15).pack(side=tk.LEFT, padx=5)
+        self.deploy_btn = ttk.Button(btn_frame, text="📋 复制并重命名", command=self.local_deploy, width=20)
+        self.deploy_btn.pack(side=tk.LEFT, padx=10)
+
+        self.deploy_status = ttk.Label(btn_frame, text="", foreground="gray")
+        self.deploy_status.pack(side=tk.LEFT, padx=10)
+
+    def create_ssh_ui(self, parent):
+        """创建SSH界面"""
+        # SSH连接设置
+        ssh_frame = ttk.LabelFrame(parent, text="SSH连接设置")
+        ssh_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        ttk.Label(ssh_frame, text="主机IP:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(ssh_frame, textvariable=self.ssh_host, width=20).grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(ssh_frame, text="端口:").grid(row=0, column=2, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(ssh_frame, textvariable=self.ssh_port, width=10).grid(row=0, column=3, padx=5, pady=5)
+
+        ttk.Label(ssh_frame, text="用户名:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(ssh_frame, textvariable=self.ssh_user, width=20).grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(ssh_frame, text="密码:").grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(ssh_frame, textvariable=self.ssh_password, width=20, show="*").grid(row=1, column=3, padx=5, pady=5)
+
+        # 连接测试
+        conn_frame = ttk.Frame(ssh_frame)
+        conn_frame.grid(row=2, column=0, columnspan=4, pady=10)
+
+        self.connect_btn = ttk.Button(conn_frame, text="🔗 测试连接", command=self.test_ssh_connection)
+        self.connect_btn.pack(side=tk.LEFT, padx=5)
+
+        self.ssh_status = ttk.Label(conn_frame, text="未连接", foreground="gray")
+        self.ssh_status.pack(side=tk.LEFT, padx=10)
+
+        if not SSH_AVAILABLE:
+            ttk.Label(conn_frame, text="⚠️ 请安装: pip install paramiko", foreground="red").pack(side=tk.LEFT, padx=10)
+
+        # 远程设置
+        remote_frame = ttk.LabelFrame(parent, text="远程服务设置")
+        remote_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        ttk.Label(remote_frame, text="远程目录:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(remote_frame, textvariable=self.remote_dir, width=50).grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(remote_frame, text="服务端口:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Entry(remote_frame, textvariable=self.service_port, width=10).grid(row=1, column=1, padx=5, pady=5,
+                                                                               sticky=tk.W)
+
+        # 执行命令说明
+        cmd_frame = ttk.LabelFrame(parent, text="将执行的命令")
+        cmd_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        cmd_text = """killall share-center
+cd /tmp/mountd/disk1_part1/RouterApp/ShareCenter
+chmod +x ./share-center
+./share-center -port 5000 -dir . &
+ps | grep share-center"""
+        ttk.Label(cmd_frame, text=cmd_text, justify=tk.LEFT, font=("Consolas", 9)).pack(padx=10, pady=5)
+
+        # 操作按钮
+        action_frame = ttk.Frame(parent)
+        action_frame.pack(pady=10)
+
+        ttk.Button(action_frame, text="🛑 停止服务", command=self.stop_service, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="▶️ 启动服务", command=self.start_service, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="🔄 重启服务", command=self.restart_service, width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="📊 查看状态", command=self.check_status, width=15).pack(side=tk.LEFT, padx=5)
+
+    def browse_publish_path(self):
+        """浏览发布路径"""
+        path = filedialog.askdirectory(title="选择发布路径（Go源文件目录）")
+        if path:
+            self.publish_path.set(path)
+
+    def browse_deploy_path(self):
+        """浏览部署路径"""
+        path = filedialog.askdirectory(title="选择部署路径（网络共享目录）")
+        if path:
+            self.deploy_path.set(path)
+
+    def browse_go_file(self):
+        """浏览选择Go源文件"""
+        initial_dir = self.publish_path.get() if self.publish_path.get() else None
+        file_path = filedialog.askopenfilename(
+            title="选择Go源文件",
+            initialdir=initial_dir,
+            filetypes=[("Go源文件", "*.go"), ("所有文件", "*.*")]
+        )
+        if file_path:
+            self.go_file_path.set(file_path)
+            # 自动设置发布路径
+            self.publish_path.set(str(Path(file_path).parent))
+            # 生成输出文件名
+            self.generate_output_name()
+            # 检查输出文件是否存在
+            self.check_output_file()
+
+    def generate_output_name(self):
+        """自动生成输出文件名"""
+        go_file = self.go_file_path.get()
+        if go_file:
+            base_name = Path(go_file).stem  # share-center_v5_0
+
+            # _v5_0 -> _v5.0
+            new_name = re.sub(r'_v(\d+)_(\d+)', r'_v\1.\2', base_name)
+
+            # 添加mt6000和arm64后缀
+            if "mt6000" not in new_name.lower():
+                new_name = new_name.replace("share-center", "share-center-mt6000", 1)
+
+            output_name = f"{new_name}_arm64"
+            self.output_file_name.set(output_name)
+
+            # 更新本地部署界面的文件信息
+            self.update_deploy_file_info()
+
+    def check_output_file(self):
+        """检查输出文件是否存在"""
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+
+        if not output_name or not publish_path:
+            self.output_file_status.config(text="请先选择Go源文件", foreground="gray")
+            return False
+
+        output_path = os.path.join(publish_path, output_name)
+
+        if os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            mod_time = datetime.fromtimestamp(os.path.getmtime(output_path))
+            status_text = f"⚠️ 文件已存在: {file_size / 1024 / 1024:.2f}MB, 修改时间: {mod_time.strftime('%Y-%m-%d %H:%M:%S')}"
+            self.output_file_status.config(text=status_text, foreground="orange")
+            self.log(f"检测到已存在的输出文件: {output_path}", "WARNING")
+            return True
+        else:
+            self.output_file_status.config(text="✅ 输出文件不存在，可以编译", foreground="green")
+            return False
+
+    def check_deploy_files(self):
+        """检查部署相关文件"""
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+        deploy_path = self.deploy_path.get()
+
+        status_lines = []
+
+        # 检查源文件
+        if output_name and publish_path:
+            source_file = os.path.join(publish_path, output_name)
+            if os.path.exists(source_file):
+                file_size = os.path.getsize(source_file)
+                status_lines.append(f"✅ 源文件存在: {file_size / 1024 / 1024:.2f}MB")
+            else:
+                status_lines.append("❌ 源文件不存在，请先编译")
+
+        # 检查目标文件
+        if deploy_path:
+            target_file = os.path.join(deploy_path, "share-center")
+            if os.path.exists(target_file):
+                file_size = os.path.getsize(target_file)
+                mod_time = datetime.fromtimestamp(os.path.getmtime(target_file))
+                status_lines.append(
+                    f"⚠️ 目标文件已存在: {file_size / 1024 / 1024:.2f}MB, {mod_time.strftime('%m-%d %H:%M')}")
+            else:
+                status_lines.append("✅ 目标位置无文件")
+
+        self.deploy_file_status.config(text="\n".join(status_lines), foreground="black")
+        self.update_deploy_file_info()
+
+    def update_deploy_file_info(self):
+        """更新部署文件信息显示"""
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+        deploy_path = self.deploy_path.get()
+
+        if output_name and publish_path:
+            source = os.path.join(publish_path, output_name)
+            self.source_file_label.config(text=f"源文件: {source}")
+
+        if deploy_path:
+            target = os.path.join(deploy_path, "share-center")
+            self.target_file_label.config(text=f"目标文件: {target}")
+
+    def log(self, message, level="INFO"):
+        """添加日志"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_line = f"[{timestamp}] [{level}] {message}\n"
+
+        self.log_text.insert(tk.END, log_line, level)
+        self.log_text.see(tk.END)
+        self.root.update()
+
+    def clear_log(self):
+        """清除日志"""
+        self.log_text.delete(1.0, tk.END)
+
+    def start_compile(self):
+        """开始编译"""
+        go_file = self.go_file_path.get()
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+
+        if not go_file:
+            messagebox.showerror("错误", "请选择Go源文件")
+            return
+
+        if not output_name:
+            messagebox.showerror("错误", "请指定输出文件名")
+            return
+
+        if not os.path.exists(go_file):
+            messagebox.showerror("错误", f"源文件不存在: {go_file}")
+            return
+
+        output_path = os.path.join(publish_path, output_name)
+
+        # 检查输出文件是否存在
+        if self.check_before_compile.get() and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            mod_time = datetime.fromtimestamp(os.path.getmtime(output_path))
+
+            msg = f"输出文件已存在:\n\n"
+            msg += f"文件: {output_name}\n"
+            msg += f"大小: {file_size / 1024 / 1024:.2f} MB\n"
+            msg += f"修改时间: {mod_time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            msg += "是否覆盖？"
+
+            if not messagebox.askyesno("文件已存在", msg, icon='warning'):
+                self.log("用户取消编译（文件已存在）", "WARNING")
+                return
+
+            # 自动备份
+            if self.auto_backup.get():
+                backup_name = f"{output_name}.bak.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                backup_path = os.path.join(publish_path, backup_name)
+                try:
+                    shutil.copy2(output_path, backup_path)
+                    self.log(f"已备份原文件: {backup_name}", "WARNING")
+                except Exception as e:
+                    self.log(f"备份失败: {e}", "ERROR")
+
+        self.compile_btn.config(state=tk.DISABLED)
+        self.compile_status.config(text="编译中...", foreground="blue")
+
+        # 在后台线程执行编译
+        thread = threading.Thread(target=self._do_compile, args=(go_file, output_name, publish_path))
+        thread.daemon = True
+        thread.start()
+
+    def _do_compile(self, go_file, output_name, publish_path):
+        """执行编译（后台线程）"""
+        try:
+            self.log("=" * 50)
+            self.log("🔨 开始交叉编译...")
+            self.log(f"源文件: {go_file}")
+            self.log(f"输出文件: {output_name}")
+
+            output_path = os.path.join(publish_path, output_name)
+
+            # 设置环境变量
+            env = os.environ.copy()
+            env["GOOS"] = "linux"
+            env["GOARCH"] = "arm64"
+            env["CGO_ENABLED"] = "0"
+
+            self.log("环境变量: GOOS=linux, GOARCH=arm64, CGO_ENABLED=0")
+
+            # 构建命令
+            cmd = [
+                "go", "build",
+                "-ldflags=-s -w",
+                "-o", output_path,
+                go_file
+            ]
+
+            self.log(f"执行命令: {' '.join(cmd)}")
+
+            # 执行编译
+            process = subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=publish_path
+            )
+
+            stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                if os.path.exists(output_path):
+                    file_size = os.path.getsize(output_path)
+                    self.log(f"✅ 编译成功!", "SUCCESS")
+                    self.log(f"输出文件: {output_path}", "SUCCESS")
+                    self.log(f"文件大小: {file_size / 1024 / 1024:.2f} MB", "SUCCESS")
+
+                    self.root.after(0, lambda: self.compile_status.config(text="✅ 编译成功", foreground="green"))
+                    self.root.after(0, self.update_deploy_file_info)
+                    self.root.after(0, self.check_output_file)
+                else:
+                    self.log("❌ 编译失败：输出文件未生成", "ERROR")
+                    self.root.after(0, lambda: self.compile_status.config(text="❌ 失败", foreground="red"))
+            else:
+                error_msg = stderr.decode("utf-8", errors="ignore")
+                self.log(f"❌ 编译失败: {error_msg}", "ERROR")
+                self.root.after(0, lambda: self.compile_status.config(text="❌ 失败", foreground="red"))
+
+        except Exception as e:
+            self.log(f"❌ 编译异常: {str(e)}", "ERROR")
+            self.root.after(0, lambda: self.compile_status.config(text="❌ 异常", foreground="red"))
+        finally:
+            self.root.after(0, lambda: self.compile_btn.config(state=tk.NORMAL))
+
+    def local_deploy(self):
+        """本地部署 - 复制并重命名文件（支持WebDAV）"""
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+        deploy_path = self.deploy_path.get()
+
+        if not output_name or not publish_path:
+            messagebox.showerror("错误", "请先完成编译步骤")
+            return
+
+        if not deploy_path:
+            messagebox.showerror("错误", "请设置部署路径")
+            return
+
+        source_file = os.path.join(publish_path, output_name)
+        target_file = os.path.join(deploy_path, "share-center")
+
+        if not os.path.exists(source_file):
+            messagebox.showerror("错误", f"源文件不存在:\n{source_file}\n\n请先完成编译")
+            return
+
+        if not os.path.exists(deploy_path):
+            messagebox.showerror("错误", f"部署路径不存在:\n{deploy_path}")
+            return
+
+        source_size = os.path.getsize(source_file)
+
+        try:
+            self.log("=" * 50)
+            self.log("📋 开始本地部署...")
+            self.log(f"源文件: {source_file}")
+            self.log(f"目标文件: {target_file}")
+            self.log(f"源文件大小: {source_size / 1024 / 1024:.2f} MB")
+
+            # 备份原文件
+            if os.path.exists(target_file) and self.auto_backup.get():
+                backup_name = f"share-center.bak.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                backup_file = os.path.join(deploy_path, backup_name)
+                try:
+                    shutil.copy2(target_file, backup_file)
+                    self.log(f"已备份原文件: {backup_name}", "WARNING")
+                except:
+                    pass  # 忽略备份错误
+
+            # 复制文件（处理WebDAV误报）
+            try:
+                shutil.copy2(source_file, target_file)
+            except OSError as e:
+                # WebDAV 1237/121 错误通常是误报
+                if e.winerror in (1237, 121):
+                    self.log(f"WebDAV返回错误码{e.winerror}（通常是误报），验证中...", "WARNING")
+                else:
+                    raise
+
+            # 等待WebDAV同步
+            import time
+            time.sleep(0.5)
+
+            # 验证
+            if os.path.exists(target_file):
+                target_size = os.path.getsize(target_file)
+                if abs(target_size - source_size) < 1024:
+                    self.log(f"✅ 部署成功! ({target_size / 1024 / 1024:.2f} MB)", "SUCCESS")
+                    self.deploy_status.config(text="✅ 部署成功", foreground="green")
+                    messagebox.showinfo("成功", f"本地部署成功!\n\n{target_file}")
+                else:
+                    self.log(f"⚠️ 文件大小不匹配", "WARNING")
+                    self.deploy_status.config(text="⚠️ 需检查", foreground="orange")
+            else:
+                self.log("❌ 目标文件未创建", "ERROR")
+                self.deploy_status.config(text="❌ 失败", foreground="red")
+
+        except Exception as e:
+            self.log(f"❌ 部署异常: {str(e)}", "ERROR")
+            self.deploy_status.config(text="❌ 异常", foreground="red")
+            messagebox.showerror("部署失败", str(e))
+
+    def get_ssh_client(self):
+        """获取SSH连接"""
+        if not SSH_AVAILABLE:
+            messagebox.showerror("错误", "请先安装paramiko库:\npip install paramiko")
+            return None
+
+        try:
+            if self.ssh_client and self.ssh_connected:
+                try:
+                    self.ssh_client.exec_command("echo test", timeout=5)
+                    return self.ssh_client
+                except:
+                    self.ssh_connected = False
+
+            self.log(f"连接SSH: {self.ssh_user.get()}@{self.ssh_host.get()}:{self.ssh_port.get()}")
+
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(
+                hostname=self.ssh_host.get(),
+                port=self.ssh_port.get(),
+                username=self.ssh_user.get(),
+                password=self.ssh_password.get(),
+                timeout=10
+            )
+
+            self.ssh_client = client
+            self.ssh_connected = True
+            self.ssh_status.config(text="✅ 已连接", foreground="green")
+            self.log("SSH连接成功", "SUCCESS")
+            return client
+
+        except Exception as e:
+            self.log(f"SSH连接失败: {str(e)}", "ERROR")
+            self.ssh_status.config(text="❌ 连接失败", foreground="red")
+            messagebox.showerror("SSH错误", f"连接失败:\n{str(e)}")
+            return None
+
+    def test_ssh_connection(self):
+        """测试SSH连接"""
+        self.log("测试SSH连接...")
+        client = self.get_ssh_client()
+        if client:
+            try:
+                stdin, stdout, stderr = client.exec_command("uname -a")
+                output = stdout.read().decode("utf-8")
+                self.log(f"系统信息: {output.strip()}", "SUCCESS")
+                messagebox.showinfo("连接成功", f"SSH连接成功!\n\n系统信息:\n{output}")
+            except Exception as e:
+                self.log(f"命令执行失败: {str(e)}", "ERROR")
+
+    def exec_ssh_command(self, command, show_output=True):
+        """执行SSH命令"""
+        client = self.get_ssh_client()
+        if not client:
+            return None
+
+        try:
+            self.log(f"$ {command}")
+            stdin, stdout, stderr = client.exec_command(command)
+
+            output = stdout.read().decode("utf-8")
+            error = stderr.read().decode("utf-8")
+
+            if show_output:
+                if output:
+                    for line in output.strip().split("\n"):
+                        if line:
+                            self.log(f"  {line}")
+                if error:
+                    for line in error.strip().split("\n"):
+                        if line:
+                            self.log(f"  ! {line}", "WARNING")
+
+            return output, error
+
+        except Exception as e:
+            self.log(f"命令执行失败: {str(e)}", "ERROR")
+            return None
+
+    def stop_service(self):
+        """停止服务"""
+        self.log("=" * 50)
+        self.log("🛑 停止ShareCenter服务...")
+        self.exec_ssh_command("killall share-center 2>/dev/null || echo '服务未运行'")
+        self.log("✅ 停止命令已执行", "SUCCESS")
+
+    def start_service(self):
+        """启动服务"""
+        remote_dir = self.remote_dir.get()
+        port = self.service_port.get()
+
+        self.log("=" * 50)
+        self.log("▶️ 启动ShareCenter服务...")
+
+        # 设置执行权限
+        self.exec_ssh_command(f"chmod +x {remote_dir}/share-center")
+
+        # 后台启动服务
+        cmd = f"cd {remote_dir} && nohup ./share-center -port {port} -dir . > /tmp/share-center.log 2>&1 &"
+        self.exec_ssh_command(cmd)
+
+        # 等待启动
+        import time
+        time.sleep(1)
+
+        # 检查状态
+        self.check_status()
+
+    def restart_service(self):
+        """重启服务"""
+        self.log("=" * 50)
+        self.log("🔄 重启ShareCenter服务...")
+        self.stop_service()
+
+        import time
+        time.sleep(1)
+
+        self.start_service()
+
+    def check_status(self):
+        """检查服务状态"""
+        self.log("📊 检查服务状态...")
+        result = self.exec_ssh_command("ps | grep share-center | grep -v grep")
+
+        if result and result[0].strip():
+            self.log("✅ 服务正在运行", "SUCCESS")
+        else:
+            self.log("⚠️ 服务未运行", "WARNING")
+
+    def one_click_all(self):
+        """一键全流程"""
+        if not messagebox.askyesno("确认",
+                                   "是否执行一键全流程？\n\n将依次执行：\n1. 交叉编译\n2. 本地部署（复制到网络目录）\n3. SSH重启服务"):
+            return
+
+        # 验证参数
+        go_file = self.go_file_path.get()
+        if not go_file:
+            messagebox.showerror("错误", "请先选择Go源文件")
+            return
+
+        deploy_path = self.deploy_path.get()
+        if not deploy_path or not os.path.exists(deploy_path):
+            messagebox.showerror("错误", "请设置有效的部署路径")
+            return
+
+        output_name = self.output_file_name.get()
+        publish_path = self.publish_path.get()
+        output_path = os.path.join(publish_path, output_name)
+
+        # 检查输出文件是否存在
+        if self.check_before_compile.get() and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            mod_time = datetime.fromtimestamp(os.path.getmtime(output_path))
+
+            msg = f"输出文件已存在:\n\n"
+            msg += f"文件: {output_name}\n"
+            msg += f"大小: {file_size / 1024 / 1024:.2f} MB\n"
+            msg += f"修改时间: {mod_time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            msg += "是否覆盖并继续？"
+
+            if not messagebox.askyesno("文件已存在", msg, icon='warning'):
+                self.log("用户取消操作（文件已存在）", "WARNING")
+                return
+
+        # 在后台执行
+        thread = threading.Thread(target=self._do_one_click_all)
+        thread.daemon = True
+        thread.start()
+
+    def _do_one_click_all(self):
+        """执行一键全流程（后台）"""
+        try:
+            self.log("=" * 50)
+            self.log("🚀 开始一键全流程部署...", "SUCCESS")
+
+            # 第1步：编译
+            go_file = self.go_file_path.get()
+            output_name = self.output_file_name.get()
+            publish_path = self.publish_path.get()
+
+            self.log("")
+            self.log("【第1步】交叉编译")
+
+            output_path = os.path.join(publish_path, output_name)
+
+            # 备份已存在的文件
+            if os.path.exists(output_path) and self.auto_backup.get():
+                backup_name = f"{output_name}.bak.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                shutil.copy2(output_path, os.path.join(publish_path, backup_name))
+                self.log(f"已备份: {backup_name}", "WARNING")
+
+            env = os.environ.copy()
+            env["GOOS"] = "linux"
+            env["GOARCH"] = "arm64"
+            env["CGO_ENABLED"] = "0"
+
+            cmd = ["go", "build", "-ldflags=-s -w", "-o", output_path, go_file]
+            self.log(f"执行: go build -ldflags=\"-s -w\" -o {output_name} ...")
+
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=publish_path)
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0 or not os.path.exists(output_path):
+                error_msg = stderr.decode("utf-8", errors="ignore")
+                self.log(f"❌ 编译失败: {error_msg}", "ERROR")
+                self.root.after(0, lambda: messagebox.showerror("失败", "编译失败，流程终止"))
+                return
+
+            file_size = os.path.getsize(output_path)
+            self.log(f"✅ 编译成功 ({file_size / 1024 / 1024:.2f} MB)", "SUCCESS")
+
+            # 第2步：本地部署
+            self.log("")
+            self.log("【第2步】本地部署")
+
+            deploy_path = self.deploy_path.get()
+            target_file = os.path.join(deploy_path, "share-center")
+
+            if os.path.exists(target_file) and self.auto_backup.get():
+                backup_name = f"share-center.bak.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                shutil.copy2(target_file, os.path.join(deploy_path, backup_name))
+                self.log(f"已备份: {backup_name}")
+
+            shutil.copy2(output_path, target_file)
+            self.log(f"✅ 已复制到: {target_file}", "SUCCESS")
+
+            # 第3步：SSH重启
+            self.log("")
+            self.log("【第3步】SSH重启服务")
+
+            client = self.get_ssh_client()
+            if not client:
+                self.log("❌ SSH连接失败，请手动重启服务", "ERROR")
+                self.root.after(0, lambda: messagebox.showwarning("警告",
+                                                                  "编译和部署成功，但SSH连接失败\n请手动重启路由器服务"))
+                return
+
+            remote_dir = self.remote_dir.get()
+            port = self.service_port.get()
+
+            # 停止
+            self.exec_ssh_command("killall share-center 2>/dev/null || true")
+
+            import time
+            time.sleep(1)
+
+            # 设置权限并启动
+            self.exec_ssh_command(f"chmod +x {remote_dir}/share-center")
+            self.exec_ssh_command(
+                f"cd {remote_dir} && nohup ./share-center -port {port} -dir . > /tmp/share-center.log 2>&1 &")
+
+            time.sleep(1)
+
+            # 检查状态
+            result = self.exec_ssh_command("ps | grep share-center | grep -v grep")
+
+            self.log("")
+            self.log("=" * 50)
+            if result and result[0].strip():
+                self.log("🎉 一键部署完成！服务已启动", "SUCCESS")
+                self.root.after(0, lambda: messagebox.showinfo("成功", "一键部署完成！\n\n服务已成功启动"))
+            else:
+                self.log("⚠️ 部署完成，但服务可能未正常启动", "WARNING")
+                self.root.after(0, lambda: messagebox.showwarning("警告", "部署完成，但服务可能未正常启动\n请检查日志"))
+
+        except Exception as e:
+            self.log(f"❌ 一键部署异常: {str(e)}", "ERROR")
+            self.root.after(0, lambda: messagebox.showerror("错误", str(e)))
+
+
+def main():
+    root = tk.Tk()
+    app = ShareCenterDeployTool(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

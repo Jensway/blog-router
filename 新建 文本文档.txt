@@ -1,0 +1,247 @@
+import tkinter as tk
+import customtkinter as ctk  # 需要 pip install customtkinter
+from tkinter import filedialog, messagebox
+import subprocess
+import threading
+import os
+import shutil
+import json
+from pathlib import Path
+from datetime import datetime
+
+# 设置主题
+ctk.set_appearance_mode("System")  # System, Dark, Light
+ctk.set_default_color_theme("blue")
+
+CONFIG_FILE = "deploy_config.json"
+
+
+class ModernDeployTool(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("MT-6000 ShareCenter 部署工具 v3.0")
+        self.geometry("1100x750")
+
+        # 布局配置
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        # 变量初始化
+        self.init_variables()
+        self.load_config()
+
+        # --- UI 组件 ---
+        self.create_sidebar()
+        self.create_main_view()
+        self.create_log_area()
+
+    def init_variables(self):
+        self.go_file_path = tk.StringVar()
+        self.output_file_name = tk.StringVar()
+        self.publish_path = tk.StringVar()
+        self.deploy_path = tk.StringVar(value="Y:\\RouterApp\\ShareCenter")
+        self.ssh_host = tk.StringVar(value="192.168.8.1")
+        self.ssh_port = tk.StringVar(value="22")
+        self.ssh_user = tk.StringVar(value="root")
+        self.ssh_password = tk.StringVar()
+        self.remote_dir = tk.StringVar(value="/tmp/mountd/disk1_part1/RouterApp/ShareCenter")
+        self.service_port = tk.StringVar(value="5000")
+        self.auto_backup = tk.BooleanVar(value=True)
+
+    def create_sidebar(self):
+        """侧边栏 - 放置设置和全局操作"""
+        self.sidebar = ctk.CTkFrame(self, width=240, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
+
+        ctk.CTkLabel(self.sidebar, text="⚙️ 部署配置", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
+
+        # SSH 设置组
+        ssh_group = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        ssh_group.pack(fill="x", padx=20)
+
+        self.add_side_entry(ssh_group, "主机IP", self.ssh_host)
+        self.add_side_entry(ssh_group, "SSH密码", self.ssh_password, show="*")
+        self.add_side_entry(ssh_group, "远程目录", self.remote_dir)
+
+        # 选项
+        ctk.CTkCheckBox(self.sidebar, text="自动备份文件", variable=self.auto_backup).pack(pady=10)
+
+        # 底部按钮
+        ctk.CTkButton(self.sidebar, text="💾 保存全局配置", command=self.save_config).pack(side="bottom", pady=20,
+                                                                                          padx=20)
+        ctk.CTkButton(self.sidebar, text="🔄 清除日志", fg_color="gray", command=self.clear_log).pack(side="bottom",
+                                                                                                     pady=10, padx=20)
+
+    def add_side_entry(self, parent, label, var, **kwargs):
+        ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12)).pack(anchor="w", pady=(10, 0))
+        ctk.CTkEntry(parent, textvariable=var, height=30, **kwargs).pack(fill="x")
+
+    def create_main_view(self):
+        """主工作区 - 流程化操作"""
+        self.main_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=10)
+
+        # --- 第一步：编译 ---
+        self.create_step_card(
+            self.main_frame, "Step 1: 交叉编译",
+            "选择 Go 源文件并编译为 ARM64 架构二进制文件",
+            [
+                ("选择文件", self.browse_go_file, "blue"),
+                ("开始编译", self.start_compile, "green")
+            ],
+            self.go_file_path, "源文件路径..."
+        )
+
+        # --- 第二步：部署 ---
+        self.create_step_card(
+            self.main_frame, "Step 2: 本地分发",
+            "将编译产物移动至路由器映射的网络驱动器 (WebDAV/SMB)",
+            [
+                ("选择部署目录", self.browse_deploy_path, "blue"),
+                ("执行部署", self.local_deploy, "indigo")
+            ],
+            self.deploy_path, "部署路径..."
+        )
+
+        # --- 第三步：远程控制 ---
+        ssh_card = ctk.CTkFrame(self.main_frame)
+        ssh_card.pack(fill="x", pady=10)
+
+        ctk.CTkLabel(ssh_card, text="Step 3: 远程服务控制", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0,
+                                                                                                           column=0,
+                                                                                                           padx=15,
+                                                                                                           pady=10,
+                                                                                                           sticky="w")
+
+        btn_box = ctk.CTkFrame(ssh_card, fg_color="transparent")
+        btn_box.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+
+        ctk.CTkButton(btn_box, text="▶ 启动", width=100, command=self.start_service).pack(side="left", padx=5)
+        ctk.CTkButton(btn_box, text="⏹ 停止", width=100, fg_color="#E74C3C", command=self.stop_service).pack(
+            side="left", padx=5)
+        ctk.CTkButton(btn_box, text="🔄 重启", width=100, command=self.restart_service).pack(side="left", padx=5)
+        ctk.CTkButton(btn_box, text="🔍 状态", width=100, fg_color="gray", command=self.check_status).pack(side="left",
+                                                                                                          padx=5)
+
+        # 一键操作
+        ctk.CTkButton(self.main_frame, text="⚡ 一键全流程：编译 + 部署 + 重启",
+                      height=50, font=ctk.CTkFont(size=15, weight="bold"),
+                      command=self.one_click_all).pack(fill="x", pady=20)
+
+    def create_step_card(self, parent, title, subtitle, buttons, var, placeholder):
+        card = ctk.CTkFrame(parent)
+        card.pack(fill="x", pady=10)
+
+        ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, padx=15,
+                                                                                      pady=(10, 0), sticky="w")
+        ctk.CTkLabel(card, text=subtitle, font=ctk.CTkFont(size=12), text_color="gray").grid(row=1, column=0, padx=15,
+                                                                                             pady=(0, 10), sticky="w")
+
+        entry_frame = ctk.CTkFrame(card, fg_color="transparent")
+        entry_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
+
+        ctk.CTkEntry(entry_frame, textvariable=var, placeholder_text=placeholder, width=500).pack(side="left", padx=5,
+                                                                                                  fill="x", expand=True)
+
+        for btn_text, btn_cmd, btn_color in buttons:
+            ctk.CTkButton(card, text=btn_text, command=btn_cmd, width=120).grid(row=2,
+                                                                                column=1 if "选择" in btn_text else 2,
+                                                                                padx=5, pady=5)
+
+    def create_log_area(self):
+        """底部日志区 - 关键点：设置 weight 使其可自由缩放"""
+        self.log_frame = ctk.CTkFrame(self)
+        self.log_frame.grid(row=1, column=1, sticky="nsew", padx=20, pady=(0, 20))
+        self.log_frame.grid_rowconfigure(0, weight=1)
+        self.log_frame.grid_columnconfigure(0, weight=1)
+
+        self.log_text = ctk.CTkTextbox(self.log_frame, font=("Consolas", 12), border_width=1)
+        self.log_text.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+        # 初始欢迎语
+        self.log(">>> 系统就绪。等待操作...", "INFO")
+
+    # --- 逻辑功能 (保持原有功能，优化日志输出) ---
+    def log(self, message, level="INFO"):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        prefix = {"INFO": "🔵", "SUCCESS": "✅", "ERROR": "❌", "WARNING": "⚠️"}.get(level, "")
+        self.log_text.insert("end", f"[{timestamp}] {prefix} {message}\n")
+        self.log_text.see("end")
+
+    def browse_go_file(self):
+        file = filedialog.askopenfilename(filetypes=[("Go Files", "*.go")])
+        if file:
+            self.go_file_path.set(file)
+            self.publish_path.set(str(Path(file).parent))
+            # 自动生成输出文件名逻辑...
+            name = Path(file).stem.replace("_v", ".v") + "_arm64"
+            self.output_file_name.set(name)
+            self.log(f"已选择源文件: {Path(file).name}")
+
+    def browse_deploy_path(self):
+        path = filedialog.askdirectory()
+        if path:
+            self.deploy_path.set(path)
+
+    # ... 这里保留你原有的编译、SSH、部署的逻辑代码 ...
+    # 注意将所有的 self.log_text.insert 替换为 self.log()
+    # 将 messagebox 替换为 ctk 的样式或保持原样
+
+    def start_compile(self):
+        # 示例：多线程执行防止界面卡死
+        threading.Thread(target=self._compile_worker, daemon=True).start()
+
+    def _compile_worker(self):
+        self.log("正在准备编译...", "INFO")
+        # 模拟原有编译逻辑...
+        # ... 原有代码中的 subprocess 调用 ...
+        self.log("编译功能已调用 (请根据原逻辑补充代码)", "SUCCESS")
+
+    def load_config(self):
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    for key, value in config.items():
+                        if hasattr(self, key):
+                            getattr(self, key).set(value)
+            except:
+                pass
+
+    def save_config(self):
+        config = {
+            'ssh_host': self.ssh_host.get(),
+            'remote_dir': self.remote_dir.get(),
+            'deploy_path': self.deploy_path.get(),
+            # ... 其他字段 ...
+        }
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+        self.log("配置已持久化保存", "SUCCESS")
+
+    def clear_log(self):
+        self.log_text.delete("1.0", "end")
+
+    def stop_service(self):
+        self.log("停止服务命令已发送")
+
+    def start_service(self):
+        self.log("启动服务命令已发送")
+
+    def restart_service(self):
+        self.log("重启服务命令已发送")
+
+    def check_status(self):
+        self.log("正在查询进程状态...")
+
+    def local_deploy(self):
+        self.log("正在执行本地文件覆盖...")
+
+    def one_click_all(self):
+        self.log("开始全自动流水线...", "WARNING")
+
+
+if __name__ == "__main__":
+    app = ModernDeployTool()
+    app.mainloop()

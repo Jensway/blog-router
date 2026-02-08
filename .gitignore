@@ -1,0 +1,12 @@
+# 后端
+*.exe
+blog
+
+# 前端 / Android
+android-app/node_modules/
+android-app/dist/
+android-app/android/
+
+# 其他
+*.zip
+.DS_Store

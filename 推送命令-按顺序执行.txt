@@ -1,0 +1,23 @@
+# 在终端里一条一条执行（只复制每行命令，不要带 PS 提示符）
+# 当前目录要是项目目录：cd Y:\共享中心APP\blog-router
+
+# 1. 告诉 Git 信任当前这个目录（网络盘/映射盘必须）
+git config --global --add safe.directory "*"
+
+# 2. 若上面不行，改用这一条（把 Y 换成你的盘符）
+# git config --global --add safe.directory "Y:/共享中心APP/blog-router"
+
+# 3. 添加所有文件
+git add .
+
+# 4. 首次提交
+git commit -m "首次提交"
+
+# 5. 主分支命名为 main
+git branch -M main
+
+# 6. 添加远程仓库（地址末尾要带 .git）
+git remote add origin https://github.com/Jensway/blog-router.git
+
+# 7. 推送到 GitHub
+git push -u origin main
