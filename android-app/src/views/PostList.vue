@@ -3,14 +3,6 @@
     <header class="header blur-header">
       <div class="header-content">
         <h1>我的日志</h1>
-        <div class="header-actions">
-          <button class="icon-btn logout-btn" @click="logout" aria-label="注销" title="切换账号">
-            <span class="icon">⎋</span>
-          </button>
-          <button class="icon-btn" @click="goMessages" aria-label="消息" title="打开消息广场">
-            <span class="chat-icon">💬</span>
-          </button>
-        </div>
       </div>
 
       <div class="tabs">
@@ -103,17 +95,6 @@ function goPost(id) {
 
 function goNewPost() {
   router.push('/posts/new')
-}
-
-function goMessages() {
-  router.push('/messages')
-}
-
-function logout() {
-  if (confirm('确定要注销当前账号吗？注销后需要重新填入服务器与API令牌。')) {
-    setConfig('', '') 
-    router.replace('/login')
-  }
 }
 
 onMounted(load)

@@ -16,9 +16,13 @@
 </template>
 
 <script setup>
-import { reactive, provide } from 'vue'
+import { reactive, provide, onMounted } from 'vue'
+import { App as CapacitorApp } from '@capacitor/app'
+import { useRouter } from 'vue-router'
+import { api } from './api'
 
 const toast = reactive({ show: false, text: '' })
+const router = useRouter()
 let timer = null
 function showToast(text) {
   toast.text = text
@@ -30,6 +34,18 @@ function showToast(text) {
   }, 3000)
 }
 provide('toast', showToast)
+
+onMounted(() => {
+  // Listen for generic App intent URLs (sometimes used by share targets)
+  window.addEventListener('appUrlOpen', async (data) => {
+    if (data && data.url) {
+      toast.text = '收到外部应用分享，正在处理...'
+      toast.show = true
+      // Typically we'd bridge the incoming data to MessageSquare or PostEdit
+      setTimeout(() => { toast.show = false }, 3000)
+    }
+  })
+})
 </script>
 
 <style>

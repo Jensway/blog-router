@@ -1,12 +1,9 @@
 <template>
-  <div class="page">
+  <div class="page has-bottom-nav">
     <header class="header blur-header">
-      <button class="back-btn" @click="router.back">
-        <span class="icon">←</span>
-        <span>返回日志</span>
-      </button>
+      <div style="width: 24px;"></div> <!-- Spacer -->
       <h1>消息广场</h1>
-      <div style="width: 70px;"></div> <!-- Spacer for centering -->
+      <div style="width: 24px;"></div> <!-- Spacer -->
     </header>
     
     <div class="messages-container">
@@ -288,7 +285,11 @@ onMounted(load)
 }
 
 .messages-container {
-  padding: 16px 20px 120px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px 20px 0; /* Removed large bottom padding since send-area is now handled by layout wrapper */
 }
 
 /* Base States */
@@ -405,10 +406,11 @@ onMounted(load)
   background: linear-gradient(to top, rgba(248, 250, 252, 1) 60%, rgba(248, 250, 252, 0) 100%);
   z-index: 100;
   pointer-events: none; /* Let clicks pass through background */
+  padding-bottom: 24px; /* Increased bottom padding to clear the bottom nav */
 }
 
-.glass-bar {
-  background: rgba(255, 255, 255, 0.9);
+.send-area.glass-bar {
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 24px;

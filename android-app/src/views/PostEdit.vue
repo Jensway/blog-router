@@ -17,12 +17,11 @@
         placeholder="标题 (可选，留空将截取正文片段)" 
         maxlength="120"
       />
-      <textarea 
-        v-model="post.content" 
-        class="input-content" 
-        placeholder="在这里写下你的日志正文... (支持 Markdown 语法)"
-        required
-      ></textarea>
+      <editor
+        v-model="post.content"
+        :init="editorConfig"
+        class="input-content"
+      />
     </div>
   </div>
 </template>
@@ -30,7 +29,8 @@
 <script setup>
 import { ref, onMounted, inject, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '../api'
+import { api, fileURL } from '../api'
+import Editor from '@tinymce/tinymce-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -45,10 +45,33 @@ const error = ref('')
 const post = ref({
   title: '',
   content: '',
-  content_type: 'text',
+  content_type: 'html',  // TinyMCE produces HTML
   is_draft: false,
   source: 'android-app'
 })
+
+const editorConfig = {
+  plugins: 'link image lists table code wordcount',
+  toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code',
+  menubar: false,
+  statusbar: false,
+  height: '100%',
+  width: '100%',
+  language: 'zh_CN',
+  placeholder: '在这里写下你的日志正文...',
+  images_upload_handler: async (blobInfo) => {
+    try {
+      const res = await api.uploadFile(blobInfo.blob())
+      if (res.url) {
+        return fileURL('/api/file/' + res.url)
+      } else {
+        throw new Error('上传返回格式错误')
+      }
+    } catch(e) {
+      throw { message: e.message || '图片上传失败', remove: true }
+    }
+  }
+}
 
 onMounted(async () => {
   if (isEdit.value) {
@@ -59,7 +82,7 @@ onMounted(async () => {
         title: data.title || '',
         // server returns safe_content and content, we need the raw content for editing
         content: data.content || '',
-        content_type: data.content_type || 'text',
+        content_type: 'html', // ensure we save back as html
         is_draft: data.is_draft || false,
         source: 'android-app'
       }
@@ -180,12 +203,13 @@ function goBack() {
 
 .input-content {
   flex: 1;
-  border: none;
-  font-size: 16px;
-  line-height: 1.6;
-  resize: none;
-  color: var(--dark);
-  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
-.input-content:focus { outline: none; }
+/* Ensure the TinyMCE editor fills the container height in mobile view */
+:deep(.tox-tinymce) {
+  flex: 1;
+  border: none !important;
+  border-radius: 8px !important;
+}
 </style>

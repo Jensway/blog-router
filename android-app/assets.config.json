@@ -1,0 +1,13 @@
+{
+    "assets": {
+        "icon": {
+            "windows": false,
+            "pwa": false,
+            "ios": false,
+            "android": true,
+            "flavor": "adaptive",
+            "background": "#ffffff",
+            "padding": "12%"
+        }
+    }
+}

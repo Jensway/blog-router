@@ -5,16 +5,29 @@ import PostList from '../views/PostList.vue'
 import PostDetail from '../views/PostDetail.vue'
 import MessageSquare from '../views/MessageSquare.vue'
 
+import MainLayout from '../views/MainLayout.vue'
+import Settings from '../views/Settings.vue' // Will be created
 import PostEdit from '../views/PostEdit.vue'
 
 const routes = [
   { path: '/', redirect: () => (getConfig()?.apiToken ? '/posts' : '/login') },
   { path: '/login', component: Login },
-  { path: '/posts', component: PostList },
+  
+  // Tab Layout Routes
+  { 
+    path: '/', 
+    component: MainLayout,
+    children: [
+      { path: 'posts', component: PostList },
+      { path: 'messages', component: MessageSquare },
+      { path: 'settings', component: Settings },
+    ]
+  },
+
+  // Full Screen Routes
   { path: '/posts/new', component: PostEdit },
   { path: '/posts/:id/edit', component: PostEdit },
   { path: '/posts/:id', component: PostDetail },
-  { path: '/messages', component: MessageSquare },
 ]
 
 const router = createRouter({
