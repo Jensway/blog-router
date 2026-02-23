@@ -3,16 +3,20 @@
     <!-- iOS/Android Style Top Navigation Bar -->
     <nav class="top-nav">
       <router-link to="/posts" class="nav-item" active-class="active">
-        <span class="nav-label">日志</span>
+        <span class="nav-label">日志中心</span>
       </router-link>
       
       <router-link to="/messages" class="nav-item" active-class="active">
-        <span class="nav-label">广场</span>
+        <span class="nav-label">消息中心</span>
       </router-link>
 
       <router-link to="/settings" class="nav-item" active-class="active">
-        <span class="nav-label">我的</span>
+        <span class="nav-label">设置</span>
       </router-link>
+
+      <button class="nav-item exit-btn" @click="exitApp">
+        <span class="nav-label">退出</span>
+      </button>
     </nav>
 
     <!-- Router View for the Tabs -->
@@ -25,6 +29,20 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { App as CapacitorApp } from '@capacitor/app'
+
+function exitApp() {
+  if (confirm('确定要退出程序吗？')) {
+    if (window.Capacitor && window.Capacitor.isNative) {
+      CapacitorApp.exitApp()
+    } else {
+      window.close()
+    }
+  }
+}
+</script>
 
 <style scoped>
 .main-layout {
@@ -87,9 +105,24 @@
   left: 30%;
   right: 30%;
   height: 3px;
+  height: 3px;
   background: var(--primary);
   border-radius: 3px 3px 0 0;
 }
 
+.exit-btn {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  opacity: 0.8;
+}
+.exit-btn .nav-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.exit-btn:active {
+  transform: scale(0.95);
+}
 
 </style>

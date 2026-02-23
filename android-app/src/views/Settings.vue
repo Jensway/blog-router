@@ -1,14 +1,5 @@
 <template>
   <div class="page has-bottom-nav">
-    <header class="header blur-header">
-      <div class="header-content">
-        <h1>我的设置</h1>
-        <button class="icon-btn logout-btn" @click="logout" aria-label="注销" title="切换账号">
-          <span class="icon">⎋</span>
-        </button>
-      </div>
-    </header>
-
     <div class="content-area">
       <div class="settings-group">
         <h3 class="group-title">账号与服务器</h3>
@@ -40,6 +31,9 @@
             <span class="setting-desc">Jensway / GPT-4o Mobile Core</span>
           </div>
         </div>
+      </div>
+      <div class="settings-group logout-group" @click="logout">
+        <span class="logout-text">注销账号并重新登录</span>
       </div>
       
       <div class="bottom-spacer"></div>
@@ -78,57 +72,8 @@ function logout() {
   background-color: var(--light);
 }
 
-.blur-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(248, 250, 252, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-content h1 { 
-  font-size: 28px; 
-  font-weight: 800; 
-  letter-spacing: -0.5px;
-  color: var(--dark);
-  margin: 0;
-}
-
-.icon-btn {
-  width: 44px;
-  height: 44px;
-  border: none;
-  background: var(--white);
-  border-radius: 14px;
-  font-size: 20px;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.logout-btn {
-  background: transparent;
-  box-shadow: none;
-  border: 1px solid #e2e8f0;
-  color: var(--gray);
-  font-size: 16px;
-}
-.logout-btn:hover { background: #fef2f2; border-color: #fecaca; color: var(--danger); }
-
 .content-area {
-  padding: 20px;
+  padding: 20px 20px 100px; /* Enhanced bottom padding to ensure scroll clears */
 }
 
 .settings-group {
@@ -138,6 +83,22 @@ function logout() {
   padding: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid #e2e8f0;
+}
+
+.logout-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.logout-group:active {
+  background: #fef2f2;
+}
+.logout-text {
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .group-title {

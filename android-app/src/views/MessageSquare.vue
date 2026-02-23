@@ -1,11 +1,5 @@
 <template>
   <div class="page has-bottom-nav">
-    <header class="header blur-header">
-      <div style="width: 24px;"></div> <!-- Spacer -->
-      <h1>消息广场</h1>
-      <div style="width: 24px;"></div> <!-- Spacer -->
-    </header>
-    
     <div class="messages-container">
       <div v-if="loading" class="state-box">
         <div class="loader"></div>
@@ -16,26 +10,44 @@
       </div>
       
       <ul v-else class="list">
-        <li v-for="m in messages" :key="m.id" class="msg-card">
-          <div class="msg-head">
-            <div class="user-info">
-              <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
-              <span class="user">{{ m.username }}</span>
+        <li v-for="m in messages" :key="m.id" class="msg-swipe-container">
+          <div class="msg-swipe-track">
+            <!-- Main Card -->
+            <div class="msg-card">
+              <div class="msg-head">
+                <div class="user-info">
+                  <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
+                  <span class="user">{{ m.username }}</span>
+                </div>
+                <div class="head-actions">
+                  <span class="time">{{ m.created_at }}</span>
+                </div>
+              </div>
+              <p v-if="m.content" class="msg-content">{{ m.content }}</p>
+              <div v-if="m.file_url" class="msg-attachment">
+                <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" />
+                <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
+                  <span class="file-icon">📄</span>
+                  <span class="file-txt">{{ m.file_name || '附件' }}</span>
+                </a>
+              </div>
             </div>
-            <div class="head-actions">
-              <span class="time">{{ m.created_at }}</span>
-              <button v-if="m.content" class="msg-copy-btn" @click="copyText(m.content)" title="复制消息">
-                <span class="copy-icon">⎘</span>
+
+            <!-- Swipe Actions -->
+            <div class="msg-actions">
+              <button class="action-btn action-copy" v-if="m.content" @click="copyText(m.content)">
+                <span>📋</span>
+                <small>复制</small>
+              </button>
+              <button class="action-btn action-download" v-if="m.file_url" @click="openBrowser(fileURL('/api/file/' + m.file_url))">
+                <span>⬇️</span>
+                <small>下载</small>
+              </button>
+              <button class="action-btn action-delete" @click="deleteMsg(m.id)">
+                <span>🗑️</span>
+                <small>删除</small>
               </button>
             </div>
-          </div>
-          <p v-if="m.content" class="msg-content">{{ m.content }}</p>
-          <div v-if="m.file_url" class="msg-attachment">
-            <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" />
-            <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
-              <span class="file-icon">📄</span>
-              <span class="file-txt">{{ m.file_name || '附件' }}</span>
-            </a>
           </div>
         </li>
       </ul>
@@ -69,19 +81,21 @@
              📋
           </button>
           
-          <input 
-            v-model="newContent" 
-            class="chat-input"
-            placeholder="说点什么…" 
-            maxlength="500" 
-            @keyup.enter="send" 
-            :disabled="sending"
-          />
-          
-          <button class="send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
-            <span v-if="sending" class="spinner-small"></span>
-            <span v-else>发送</span>
-          </button>
+          <div class="input-group">
+            <input 
+              v-model="newContent" 
+              class="chat-input"
+              placeholder="说点什么…" 
+              maxlength="500" 
+              @keyup.enter="send" 
+              :disabled="sending"
+            />
+            
+            <button class="send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
+              <span v-if="sending" class="spinner-small"></span>
+              <span v-else>发送</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -196,6 +210,18 @@ async function load() {
   }
 }
 
+async function deleteMsg(id) {
+  if (confirm('是否要删除这条消息？')) {
+    try {
+      await api.deleteMessage(id)
+      toast('已删除')
+      await load()
+    } catch (e) {
+      toast(e.message || '删除失败，可能没有权限')
+    }
+  }
+}
+
 async function send() {
   let content = newContent.value.trim()
   
@@ -247,49 +273,13 @@ onMounted(load)
   background-color: var(--light);
 }
 
-.blur-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(248, 250, 252, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 0;
-  cursor: pointer;
-  width: 70px;
-}
-.back-btn .icon { font-size: 18px; margin-top: -2px; }
-
-.header h1 { 
-  font-size: 20px; 
-  font-weight: 800; 
-  color: var(--dark);
-  margin: 0;
-  text-align: center;
-}
-
 .messages-container {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 16px 20px 0; /* Removed large bottom padding since send-area is now handled by layout wrapper */
+  padding: 16px 0 120px; /* Removed side padding here, added to children. Added 120px bottom padding to clear input box */
+  overflow-x: hidden;
 }
 
 /* Base States */
@@ -313,16 +303,59 @@ onMounted(load)
 .error-box { color: var(--danger); font-weight: 500; }
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 
-/* Chat Bubbles */
-.list { list-style: none; }
+/* Chat Bubbles Swipe Container */
+.list { list-style: none; margin: 0; padding: 0; }
+.msg-swipe-container {
+  width: 100vw;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  margin-bottom: 16px;
+}
+.msg-swipe-container::-webkit-scrollbar { display: none; }
+
+.msg-swipe-track {
+  display: flex;
+  width: max-content;
+}
+
 .msg-card {
+  width: calc(100vw - 40px); /* Fill screen minus padding */
+  scroll-snap-align: center;
+  margin: 0 20px;
   background: var(--white);
   border-radius: 20px;
   padding: 16px;
-  margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(0,0,0,0.02);
 }
+
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 20px; /* Padding for the trailing edge */
+  scroll-snap-align: end;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 100%;
+  border-radius: 16px;
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+.action-btn span { font-size: 20px; margin-bottom: 4px; }
+.action-copy { background: var(--primary-light); }
+.action-download { background: var(--secondary); }
+.action-delete { background: var(--danger); }
 
 .msg-head { 
   display: flex; 
@@ -473,51 +506,29 @@ onMounted(load)
 
 .send-bar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
-.attach-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
+.input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
   background: #f1f5f9;
-  border: none;
-  color: var(--gray);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+  border-radius: 22px;
+  overflow: hidden; /* Ensure square corners inside look round */
 }
-.attach-btn:hover { background: #e2e8f0; color: var(--primary); }
-.attach-icon { font-size: 20px; }
 
-.paste-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.paste-btn:hover { background: #dcfce7; }
-.paste-btn:active { transform: scale(0.95); }
-
+/* Redesigned Input and Send Button joined */
 .chat-input {
   flex: 1;
-  padding: 12px 16px;
+  min-width: 0; /* Prevents input from pushing flex items vertically */
+  height: 44px;
+  padding: 0 16px;
   border: none;
-  background: #f1f5f9;
-  border-radius: 20px;
+  background: transparent;
   font-size: 15px;
   color: var(--dark);
-  transition: all 0.2s;
 }
 .chat-input:focus {
   outline: none;
@@ -526,23 +537,23 @@ onMounted(load)
 }
 
 .send-btn {
+  flex-shrink: 0; /* Never shrink! */
+  height: 44px;
   padding: 0 20px;
-  height: 40px;
   background: var(--primary);
   color: var(--white);
   border: none;
-  border-radius: 20px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
+  white-space: nowrap; /* Prevent vertical wrapping */
   cursor: pointer;
-  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .send-btn:disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
+  background: #cbd5e1;
+  color: #fff;
   cursor: not-allowed;
 }
 .spinner-small {

@@ -1,13 +1,13 @@
 <template>
   <div class="page">
     <header class="header blur-header">
-      <div class="header-content">
-        <h1>我的日志</h1>
-      </div>
-
       <div class="tabs">
-        <div class="tab-indicator" :style="{ transform: `translateX(${currentTab === 'active' ? '0' : '100%'})` }"></div>
+        <div class="tab-indicator" :style="{ 
+          transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
+          width: 'calc(33.333% - 2.66px)'
+        }"></div>
         <button :class="['tab-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
+        <button :class="['tab-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
         <button :class="['tab-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
       </div>
     </header>
@@ -39,7 +39,7 @@
       
       <div v-if="!loading && !error && posts.length === 0" class="state-box empty-box">
         <div class="empty-icon">📝</div>
-        <p>{{ currentTab === 'trash' ? '回收站空空如也' : '这里还没有任何日志。' }}</p>
+        <p>{{ currentTab === 'trash' ? '回收站空空如也' : (currentTab === 'draft' ? '你还没有写过草稿' : '这里还没有任何日志。') }}</p>
       </div>
     </div>
 
@@ -66,7 +66,10 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const params = currentTab.value === 'trash' ? { trash: '1' } : { draft: '0' }
+    let params = { draft: '0', trash: '0' }
+    if (currentTab.value === 'trash') params = { trash: '1' }
+    else if (currentTab.value === 'draft') params = { draft: '1', trash: '0' }
+    
     posts.value = await api.getPosts(params)
   } catch (e) {
     error.value = e.message
@@ -179,7 +182,7 @@ onMounted(load)
   top: 4px;
   bottom: 4px;
   left: 4px;
-  width: calc(50% - 4px);
+  width: calc(33.333% - 2.66px); /* Modified inline, fallback here */
   background: var(--white);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -300,15 +303,15 @@ onMounted(load)
 /* Enhanced FAB */
 .fab {
   position: fixed;
-  right: 24px;
-  bottom: calc(24px + var(--safe-bottom));
-  width: 60px;
-  height: 60px;
-  border-radius: 30px;
+  right: 20px;
+  bottom: calc(20px + var(--safe-bottom));
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
