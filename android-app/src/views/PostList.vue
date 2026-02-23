@@ -3,9 +3,14 @@
     <header class="header blur-header">
       <div class="header-content">
         <h1>我的日志</h1>
-        <button class="icon-btn" @click="goMessages" aria-label="消息" title="打开消息广场">
-          <span class="chat-icon">💬</span>
-        </button>
+        <div class="header-actions">
+          <button class="icon-btn logout-btn" @click="logout" aria-label="注销" title="切换账号">
+            <span class="icon">⎋</span>
+          </button>
+          <button class="icon-btn" @click="goMessages" aria-label="消息" title="打开消息广场">
+            <span class="chat-icon">💬</span>
+          </button>
+        </div>
       </div>
 
       <div class="tabs">
@@ -56,7 +61,7 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '../api'
+import { api, setConfig } from '../api'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -104,6 +109,13 @@ function goMessages() {
   router.push('/messages')
 }
 
+function logout() {
+  if (confirm('确定要注销当前账号吗？注销后需要重新填入服务器与API令牌。')) {
+    setConfig('', '') 
+    router.replace('/login')
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -140,6 +152,12 @@ onMounted(load)
   margin: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .icon-btn {
   width: 44px;
   height: 44px;
@@ -156,6 +174,15 @@ onMounted(load)
 }
 .icon-btn:active { transform: scale(0.95); }
 .chat-icon { transform: translateY(1px); }
+
+.logout-btn {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid #e2e8f0;
+  color: var(--gray);
+  font-size: 16px;
+}
+.logout-btn:hover { background: #fef2f2; border-color: #fecaca; color: var(--danger); }
 
 /* Premium Tabs */
 .tabs {

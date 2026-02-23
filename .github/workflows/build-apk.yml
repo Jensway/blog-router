@@ -32,6 +32,12 @@ jobs:
         working-directory: android-app
         run: npx cap add android
 
+      - name: 生成并应用应用图标
+        working-directory: android-app
+        run: |
+          npm install @capacitor/assets --save-dev
+          npx @capacitor/assets generate --android
+
       - name: 构建前端
         working-directory: android-app
         run: npm run build

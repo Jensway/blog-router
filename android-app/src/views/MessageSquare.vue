@@ -25,7 +25,12 @@
               <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
               <span class="user">{{ m.username }}</span>
             </div>
-            <span class="time">{{ m.created_at }}</span>
+            <div class="head-actions">
+              <span class="time">{{ m.created_at }}</span>
+              <button v-if="m.content" class="msg-copy-btn" @click="copyText(m.content)" title="复制消息">
+                <span class="copy-icon">⎘</span>
+              </button>
+            </div>
           </div>
           <p v-if="m.content" class="msg-content">{{ m.content }}</p>
           <div v-if="m.file_url" class="msg-attachment">
@@ -63,6 +68,10 @@
             <span class="attach-icon">📎</span>
           </button>
           
+          <button class="paste-btn" @click="pasteFromClipboard" title="一键粘贴" :disabled="sending">
+             📋
+          </button>
+          
           <input 
             v-model="newContent" 
             class="chat-input"
@@ -86,6 +95,7 @@
 import { ref, onMounted, inject, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fileURL } from '../api'
+import { Clipboard } from '@capacitor/clipboard'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -101,6 +111,41 @@ const previewUrl = ref('')
 
 function isImage(file) {
   return file && file.type.startsWith('image/')
+}
+
+async function copyText(text) {
+  try {
+    await Clipboard.write({ string: text })
+    toast('已复制到剪贴板')
+  } catch (err) {
+    // Fallback for web if @capacitor/clipboard fails in browser
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('已复制到剪贴板')
+    } catch(e) {
+      toast('复制失败')
+    }
+  }
+}
+
+async function pasteFromClipboard() {
+  try {
+    const { type, value } = await Clipboard.read()
+    if (value) {
+      newContent.value = newContent.value + value
+      toast('已读取剪贴板')
+    } else {
+      toast('剪贴板为空')
+    }
+  } catch (err) {
+    // Fallback for web
+    try {
+      const text = await navigator.clipboard.readText()
+      newContent.value = newContent.value + text
+    } catch(e) {
+      toast('无法读取剪贴板，请检查权限')
+    }
+  }
 }
 
 function onFileSelected(e) {
@@ -289,10 +334,28 @@ onMounted(load)
   font-size: 13px;
 }
 .user { font-weight: 700; font-size: 15px; color: var(--dark); }
+
+.head-actions { display: flex; align-items: center; gap: 8px; }
 .time { font-size: 12px; color: #94a3b8; }
 
+.msg-copy-btn {
+  background: none;
+  border: none;
+  color: var(--gray);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.msg-copy-btn:hover { background: #f1f5f9; color: var(--primary); }
+.msg-copy-btn:active { transform: scale(0.9); }
+
 .msg-content { 
-  font-size: 15px; 
+  font-size: 15px;
   line-height: 1.6; 
   color: #334155;
   word-break: break-word; 
@@ -418,6 +481,22 @@ onMounted(load)
 }
 .attach-btn:hover { background: #e2e8f0; color: var(--primary); }
 .attach-icon { font-size: 20px; }
+
+.paste-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.paste-btn:hover { background: #dcfce7; }
+.paste-btn:active { transform: scale(0.95); }
 
 .chat-input {
   flex: 1;
