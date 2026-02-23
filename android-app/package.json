@@ -12,6 +12,7 @@
     "android": "npm run cap:android && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/browser": "^6.0.0",
     "@capacitor/clipboard": "^6.0.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"

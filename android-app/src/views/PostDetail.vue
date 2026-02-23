@@ -48,7 +48,7 @@
 <script setup>
 import { ref, onMounted, computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, getBaseURL } from '../api'
+import { api, fileURL } from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -65,11 +65,11 @@ onMounted(async () => {
   error.value = ''
   try {
     post.value = await api.getPost(id)
-    const base = getBaseURL()
-    if (base && post.value.safe_content) {
+    if (post.value.safe_content) {
+      // Regex matches src="/api/file/filename"
       post.value.safe_content = post.value.safe_content.replace(
-        /src="\/api\/file\//g,
-        'src="' + base + '/api/file/'
+        /src="(\/api\/file\/[^"]+)"/g,
+        (match, path) => `src="${fileURL(path)}"`
       )
     }
     

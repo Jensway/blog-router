@@ -35,7 +35,7 @@
           <p v-if="m.content" class="msg-content">{{ m.content }}</p>
           <div v-if="m.file_url" class="msg-attachment">
             <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" />
-            <a v-else :href="fileURL('/api/file/' + m.file_url)" target="_blank" class="msg-file">
+            <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
               <span class="file-icon">📄</span>
               <span class="file-txt">{{ m.file_name || '附件' }}</span>
             </a>
@@ -96,6 +96,7 @@ import { ref, onMounted, inject, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fileURL } from '../api'
 import { Clipboard } from '@capacitor/clipboard'
+import { Browser } from '@capacitor/browser'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -111,6 +112,14 @@ const previewUrl = ref('')
 
 function isImage(file) {
   return file && file.type.startsWith('image/')
+}
+
+async function openBrowser(url) {
+  try {
+    await Browser.open({ url })
+  } catch(e) {
+    window.open(url, '_blank')
+  }
 }
 
 async function copyText(text) {
