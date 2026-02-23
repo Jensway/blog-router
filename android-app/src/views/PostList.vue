@@ -1,18 +1,55 @@
 <template>
   <div class="page">
-    <header class="header">
-      <h1>我的日志</h1>
-      <button class="icon-btn" @click="goMessages" aria-label="消息">💬</button>
+    <header class="header blur-header">
+      <div class="header-content">
+        <h1>我的日志</h1>
+        <button class="icon-btn" @click="goMessages" aria-label="消息" title="打开消息广场">
+          <span class="chat-icon">💬</span>
+        </button>
+      </div>
+
+      <div class="tabs">
+        <div class="tab-indicator" :style="{ transform: `translateX(${currentTab === 'active' ? '0' : '100%'})` }"></div>
+        <button :class="['tab-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
+        <button :class="['tab-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+      </div>
     </header>
-    <div v-if="loading" class="loading">加载中…</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <ul v-else class="list">
-      <li v-for="p in posts" :key="p.id" class="item" @click="goPost(p.id)">
-        <span class="title">{{ postTitle(p) }}</span>
-        <span class="meta">{{ p.updated_at || p.created_at }}</span>
-      </li>
-    </ul>
-    <p v-if="!loading && !error && posts.length === 0" class="empty">暂无日志</p>
+
+    <div class="content-area">
+      <div v-if="loading" class="state-box">
+        <div class="loader"></div>
+        <p>加载中…</p>
+      </div>
+      
+      <div v-else-if="error" class="state-box error-box">
+        <span>⚠</span>
+        <p>{{ error }}</p>
+        <button class="retry-btn" @click="load">重试</button>
+      </div>
+      
+      <ul v-else class="list">
+        <li v-for="p in posts" :key="p.id" class="item card-hover" @click="goPost(p.id)">
+          <div class="item-content">
+            <span class="title">{{ postTitle(p) }}</span>
+            <div class="meta-row">
+              <span class="meta-date">{{ p.updated_at || p.created_at }}</span>
+              <span v-if="currentTab === 'trash'" class="meta-badge trash-badge">已删除</span>
+            </div>
+          </div>
+          <div class="item-arrow">›</div>
+        </li>
+      </ul>
+      
+      <div v-if="!loading && !error && posts.length === 0" class="state-box empty-box">
+        <div class="empty-icon">📝</div>
+        <p>{{ currentTab === 'trash' ? '回收站空空如也' : '这里还没有任何日志。' }}</p>
+      </div>
+    </div>
+
+    <!-- Floating Action Button for New Post -->
+    <button v-if="currentTab === 'active'" class="fab" @click="goNewPost" aria-label="写日志">
+      <span>＋</span>
+    </button>
   </div>
 </template>
 
@@ -26,17 +63,26 @@ const toast = inject('toast')
 const posts = ref([])
 const loading = ref(true)
 const error = ref('')
+const currentTab = ref('active') // 'active' or 'trash'
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    posts.value = await api.getPosts({ draft: '0' })
+    const params = currentTab.value === 'trash' ? { trash: '1' } : { draft: '0' }
+    posts.value = await api.getPosts(params)
   } catch (e) {
     error.value = e.message
     toast(e.message)
   } finally {
     loading.value = false
+  }
+}
+
+function setTab(tab) {
+  if (currentTab.value !== tab) {
+    currentTab.value = tab
+    load()
   }
 }
 
@@ -50,6 +96,10 @@ function goPost(id) {
   router.push('/posts/' + id)
 }
 
+function goNewPost() {
+  router.push('/posts/new')
+}
+
 function goMessages() {
   router.push('/messages')
 }
@@ -58,46 +108,208 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page { padding: 16px; padding-top: 12px; }
-.header {
+.page { 
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--light);
+}
+
+.blur-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
-.header h1 { font-size: 22px; font-weight: 700; }
+
+.header-content h1 { 
+  font-size: 28px; 
+  font-weight: 800; 
+  letter-spacing: -0.5px;
+  color: var(--dark);
+  margin: 0;
+}
+
 .icon-btn {
   width: 44px;
   height: 44px;
   border: none;
-  background: var(--light);
-  border-radius: 12px;
+  background: var(--white);
+  border-radius: 14px;
   font-size: 20px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.loading, .error, .empty {
-  text-align: center;
+.icon-btn:active { transform: scale(0.95); }
+.chat-icon { transform: translateY(1px); }
+
+/* Premium Tabs */
+.tabs {
+  position: relative;
+  display: flex;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+.tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 1;
+}
+.tab-btn {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
   color: var(--gray);
-  padding: 40px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.3s;
 }
-.error { color: var(--danger); }
+.tab-btn.active {
+  color: var(--dark);
+}
+
+/* List Content */
+.content-area {
+  padding: 16px 20px 100px;
+}
+
 .list { list-style: none; }
 .item {
   background: var(--white);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0,0,0,0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.card-hover:active {
+  transform: scale(0.98);
+  background: var(--light);
+}
+
+.item-content { flex: 1; min-width: 0; padding-right: 12px; }
 .item .title {
   display: block;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--dark);
   margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.item .meta {
-  font-size: 12px;
-  color: var(--gray);
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+.meta-date {
+  font-size: 13px;
+  color: #94a3b8;
+}
+.trash-badge {
+  background: #fef2f2;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.item-arrow {
+  font-size: 24px;
+  color: #cbd5e1;
+  font-weight: 300;
+}
+
+/* States */
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--gray);
+  text-align: center;
+}
+.loader {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-bottom-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+.error-box span { font-size: 32px; color: var(--danger); margin-bottom: 12px; }
+.retry-btn {
+  margin-top: 16px;
+  padding: 8px 20px;
+  background: var(--white);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+/* Enhanced FAB */
+.fab {
+  position: fixed;
+  right: 24px;
+  bottom: calc(24px + var(--safe-bottom));
+  width: 60px;
+  height: 60px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  border: none;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.fab span { transform: translateY(-1px); }
+.fab:hover { transform: scale(1.05); box-shadow: 0 14px 30px rgba(14, 165, 233, 0.5); }
+.fab:active { transform: scale(0.95); box-shadow: 0 5px 15px rgba(14, 165, 233, 0.3); }
 </style>

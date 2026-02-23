@@ -5,10 +5,14 @@ import PostList from '../views/PostList.vue'
 import PostDetail from '../views/PostDetail.vue'
 import MessageSquare from '../views/MessageSquare.vue'
 
+import PostEdit from '../views/PostEdit.vue'
+
 const routes = [
   { path: '/', redirect: () => (getConfig()?.apiToken ? '/posts' : '/login') },
   { path: '/login', component: Login },
   { path: '/posts', component: PostList },
+  { path: '/posts/new', component: PostEdit },
+  { path: '/posts/:id/edit', component: PostEdit },
   { path: '/posts/:id', component: PostDetail },
   { path: '/messages', component: MessageSquare },
 ]

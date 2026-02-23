@@ -1,11 +1,17 @@
 <template>
   <div class="app">
     <router-view v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
+      <transition name="fade-slide" mode="out-in">
         <component :is="Component" />
       </transition>
     </router-view>
-    <div v-if="toast.show" class="toast">{{ toast.text }}</div>
+    
+    <transition name="toast-slide">
+      <div v-if="toast.show" class="toast">
+        <span class="toast-icon">✨</span>
+        {{ toast.text }}
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -21,47 +27,92 @@ function showToast(text) {
   timer = setTimeout(() => {
     toast.show = false
     timer = null
-  }, 2500)
+  }, 3000)
 }
 provide('toast', showToast)
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --primary: #0f766e;
-  --primary-light: #0d9488;
-  --danger: #dc2626;
-  --dark: #1e293b;
-  --gray: #64748b;
-  --light: #f1f5f9;
-  --white: #fff;
+  --primary: #0ea5e9; /* Sky Blue */
+  --primary-light: #38bdf8;
+  --primary-dark: #0284c7;
+  --danger: #ef4444;
+  --dark: #0f172a; /* Slate 900 */
+  --gray: #64748b; /* Slate 500 */
+  --light: #f8fafc; /* Slate 50 */
+  --white: #ffffff;
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--light);
   color: var(--dark);
   font-size: 15px;
   min-height: 100vh;
   padding-top: var(--safe-top);
   padding-bottom: var(--safe-bottom);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
 .app { min-height: 100vh; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* Page Transitions */
+.fade-slide-enter-active, 
+.fade-slide-leave-active { 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+.fade-slide-enter-from { 
+  opacity: 0; 
+  transform: translateY(10px); 
+}
+.fade-slide-leave-to { 
+  opacity: 0; 
+  transform: translateY(-10px); 
+}
+
+/* Premium Toast */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px) scale(0.9);
+}
+
 .toast {
   position: fixed;
-  bottom: calc(24px + var(--safe-bottom));
+  bottom: calc(32px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
-  background: var(--dark);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--white);
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 14px 24px;
+  border-radius: 100px;
   font-size: 14px;
+  font-weight: 500;
   z-index: 9999;
   max-width: 90%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toast-icon {
+  font-size: 16px;
 }
 </style>

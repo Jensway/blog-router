@@ -53,7 +53,7 @@ async function request(path, options = {}) {
     try {
       const j = JSON.parse(text)
       if (j.error) msg = j.error
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(msg)
   }
   if (!text) return null
@@ -76,6 +76,12 @@ export const api = {
   async session() {
     return request('/api/session')
   },
+  async getLanIps(host) {
+    const url = host.startsWith('http') ? `${host}/api/lan-ips` : `http://${host}/api/lan-ips`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('无法获取局域网 IP')
+    return res.json()
+  },
   async getPosts(params = {}) {
     const q = new URLSearchParams(params).toString()
     const data = await request('/api/posts' + (q ? '?' + q : ''))
@@ -83,6 +89,18 @@ export const api = {
   },
   async getPost(id) {
     return request(`/api/posts/${id}`)
+  },
+  async createPost(body) {
+    return request('/api/posts', { method: 'POST', body: JSON.stringify(body) })
+  },
+  async updatePost(id, body) {
+    return request(`/api/posts/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  },
+  async restorePost(id) {
+    return request(`/api/posts/${id}/restore`, { method: 'POST' })
+  },
+  async hardDeletePost(id) {
+    return request(`/api/posts/${id}/hard_delete`, { method: 'DELETE' })
   },
   async getMessages() {
     return request('/api/messages')
@@ -92,6 +110,32 @@ export const api = {
   },
   async deleteMessage(id) {
     return request(`/api/messages/${id}`, { method: 'DELETE' })
+  },
+  async uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const base = getBaseURL()
+    if (!base) throw new Error('请先设置服务器地址')
+    const url = `${base}/api/posts` // Backend uses /api/posts with multipart/form-data for uploads
+    const headers = getAuthHeaders()
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers, // Do NOT set Content-Type to application/json, let browser set multipart/form-data with boundary
+      body: formData
+    })
+
+    const text = await res.text()
+    if (!res.ok) {
+      let msg = '上传失败'
+      try {
+        const j = JSON.parse(text)
+        if (j.error) msg = j.error
+      } catch (_) { }
+      throw new Error(msg)
+    }
+    return JSON.parse(text)
   },
 }
 
