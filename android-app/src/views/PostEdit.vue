@@ -81,7 +81,15 @@ onMounted(async () => {
       post.value = {
         title: data.title || '',
         // server returns safe_content and content, we need the raw content for editing
-        content: data.content || '',
+        content: (data.content || '')
+          .replace(
+            /src=".*?(\/api\/file\/[^"?]+).*?"/g,
+            (match, path) => `src="${fileURL(path)}"`
+          )
+          .replace(
+            /!\[(.*?)\]\(.*?(\/api\/file\/[^\)?\s]+).*?\)/g,
+            (match, alt, path) => `![${alt}](${fileURL(path)})`
+          ),
         content_type: 'html', // ensure we save back as html
         is_draft: data.is_draft || false,
         source: 'android-app'

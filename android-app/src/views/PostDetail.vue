@@ -65,12 +65,18 @@ onMounted(async () => {
   error.value = ''
   try {
     post.value = await api.getPost(id)
-    if (post.value.safe_content) {
-      // Regex matches src="/api/file/filename"
-      post.value.safe_content = post.value.safe_content.replace(
-        /src="(\/api\/file\/[^"]+)"/g,
-        (match, path) => `src="${fileURL(path)}"`
-      )
+    if (post.value.safe_content || post.value.content) {
+      // Fix HTML img tags: match any src containing /api/file/ and strip old IPs/tokens
+      post.value.safe_content = (post.value.safe_content || post.value.content || '')
+        .replace(
+          /src=".*?(\/api\/file\/[^"?]+).*?"/g,
+          (match, path) => `src="${fileURL(path)}"`
+        )
+        // Fix Markdown img tags: match ![alt](.../api/file/...)
+        .replace(
+          /!\[(.*?)\]\(.*?(\/api\/file\/[^\)?\s]+).*?\)/g,
+          (match, alt, path) => `![${alt}](${fileURL(path)})`
+        )
     }
     
     // Auto-highlight code blocks if Prism is loaded
