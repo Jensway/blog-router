@@ -60,6 +60,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Inject Android Share Intent Filter
+        run: node scripts/inject-share-intent.js
+        working-directory: ./android-app
+
       - name: 打包 APK
         working-directory: android-app/android
         run: |

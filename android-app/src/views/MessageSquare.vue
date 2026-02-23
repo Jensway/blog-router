@@ -108,6 +108,7 @@ import { useRouter } from 'vue-router'
 import { api, fileURL } from '../api'
 import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
+import { Filesystem } from '@capacitor/filesystem'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -202,6 +203,51 @@ async function load() {
   error.value = ''
   try {
     messages.value = await api.getMessages()
+    
+    // Check if we arrived here from an Android system Share Intent
+    const sharedRaw = localStorage.getItem('shared_intent_payload')
+    if (sharedRaw) {
+      localStorage.removeItem('shared_intent_payload')
+      const shared = JSON.parse(sharedRaw)
+      
+      if (shared.text && !shared.url) {
+        newContent.value = shared.text
+      }
+      
+      if (shared.url) {
+        try {
+          toast('正在解析分享的文件...')
+          // Capacitor returns local URI (file://...) from Share. Read it into base64.
+          const contents = await Filesystem.readFile({ path: shared.url })
+          
+          // Convert base64 to Blob
+          const byteCharacters = atob(contents.data)
+          const byteArrays = []
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512)
+            const byteNumbers = new Array(slice.length)
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            byteArrays.push(byteArray)
+          }
+          
+          const mimeType = shared.url.endsWith('.png') ? 'image/png' : 'image/jpeg'
+          const blob = new Blob(byteArrays, { type: mimeType })
+          
+          const filename = shared.url.split('/').pop() || 'shared_image.jpg'
+          const file = new File([blob], filename, { type: mimeType })
+          
+          selectedFile.value = file
+          previewUrl.value = URL.createObjectURL(file)
+          if (shared.text) newContent.value = shared.text
+        } catch (e) {
+          console.error("Failed to read shared file:", e)
+          toast('无法读取分享的文件')
+        }
+      }
+    }
   } catch (e) {
     error.value = e.message
     toast(e.message)

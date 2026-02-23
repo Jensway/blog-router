@@ -20,6 +20,7 @@ import { reactive, provide, onMounted } from 'vue'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useRouter } from 'vue-router'
 import { api } from './api'
+import { ShareExtension } from 'capacitor-share-extension'
 
 const toast = reactive({ show: false, text: '' })
 const router = useRouter()
@@ -39,13 +40,43 @@ onMounted(() => {
   // Listen for generic App intent URLs (sometimes used by share targets)
   window.addEventListener('appUrlOpen', async (data) => {
     if (data && data.url) {
-      toast.text = '收到外部应用分享，正在处理...'
+      toast.text = '收到外部分享链接...'
       toast.show = true
-      // Typically we'd bridge the incoming data to MessageSquare or PostEdit
       setTimeout(() => { toast.show = false }, 3000)
     }
   })
+
+  // Listen for natively bound Android SEND share intents
+  // This is triggered by Capacitor-share-extension
+  window.addEventListener('sendIntentReceived', () => {
+    checkIntent()
+  })
+
+  // Also check on boot in case the app was launched directly from Share
+  checkIntent()
 })
+
+async function checkIntent() {
+  try {
+    const result = await ShareExtension.checkSendIntentReceived()
+    if (result && (result.text || result.url)) {
+      showToast('获取到分享内容')
+      
+      // Store in transient local storage so the target page can pick it up
+      const sharedData = {
+        text: result.text || '',
+        url: result.url || '',      // typically a file:// URI path to the shared image
+        title: result.title || ''
+      }
+      localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
+
+      // Navigate to MessageSquare to let them quickly post it, or let them handle it
+      router.push('/messages')
+    }
+  } catch (err) {
+    console.error('Share intent check failed', err)
+  }
+}
 </script>
 
 <style>
