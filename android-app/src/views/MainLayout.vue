@@ -13,17 +13,17 @@
     <nav class="bottom-nav">
       <router-link to="/posts" class="nav-item" active-class="active">
         <span class="nav-icon">📝</span>
-        <span class="nav-label">日志</label>
+        <span class="nav-label">日志</span>
       </router-link>
       
       <router-link to="/messages" class="nav-item" active-class="active">
         <span class="nav-icon">💬</span>
-        <span class="nav-label">广场</label>
+        <span class="nav-label">广场</span>
       </router-link>
 
       <router-link to="/settings" class="nav-item" active-class="active">
         <span class="nav-icon">⚙️</span>
-        <span class="nav-label">我的</label>
+        <span class="nav-label">我的</span>
       </router-link>
     </nav>
   </div>
