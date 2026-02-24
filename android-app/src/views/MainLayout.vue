@@ -1,5 +1,11 @@
 <template>
   <div class="main-layout">
+    <!-- Universal Brand Header -->
+    <header class="app-brand blur-header">
+      <h2>数字花园</h2>
+      <p>Digital Garden</p>
+    </header>
+
     <!-- iOS/Android Style Top Navigation Bar -->
     <nav class="top-nav">
       <router-link to="/posts" class="nav-item" active-class="active">
@@ -65,8 +71,7 @@ function exitApp() {
   display: flex;
   justify-content: space-around;
   align-items: flex-end; /* Align closer to the bottom of the top bar */
-  height: calc(56px + env(safe-area-inset-top));
-  padding-top: env(safe-area-inset-top);
+  height: 56px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -74,6 +79,36 @@ function exitApp() {
   box-shadow: 0 2px 10px rgba(0,0,0,0.02);
   z-index: 100;
   flex-shrink: 0;
+}
+
+.blur-header {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: calc(16px + env(safe-area-inset-top)) 20px 12px;
+}
+
+.app-brand {
+  padding-top: 4px;
+}
+.app-brand h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--dark);
+  margin: 0 0 2px;
+  letter-spacing: -0.5px;
+}
+.app-brand p {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 .nav-item {

@@ -83,7 +83,7 @@ onMounted(async () => {
         // server returns safe_content and content, we need the raw content for editing
         content: (data.content || '')
           .replace(
-            /src=['"]?.*?(\/api\/file\/[^"?'\s>]+).*?['"]?/g,
+            /src=['"]?.*?(\/api\/file\/[^\s"'>]+).*?['"]?/g,
             (match, path) => `src="${fileURL(path)}"`
           )
           .replace(

@@ -69,7 +69,7 @@ onMounted(async () => {
       // Fix HTML img tags: aggressively extract /api/file/... regardless of quotes or trailing parameters
       post.value.safe_content = (post.value.safe_content || post.value.content || '')
         .replace(
-          /src=['"]?.*?(\/api\/file\/[^"?'\s>]+).*?['"]?/g,
+          /src=['"]?.*?(\/api\/file\/[^\s"'>]+).*?['"]?/g,
           (match, path) => `src="${fileURL(path)}"`
         )
         // Fix Markdown img tags: match ![alt](.../api/file/...)

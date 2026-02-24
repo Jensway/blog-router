@@ -1,11 +1,6 @@
 <template>
   <div class="page">
     <header class="header blur-header">
-      <div class="app-brand">
-        <h2>数字花园</h2>
-        <p>Digital Garden</p>
-      </div>
-
       <div class="tabs">
         <div class="tab-indicator" :style="{ 
           transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
@@ -135,27 +130,6 @@ onMounted(load)
   -webkit-backdrop-filter: blur(12px);
   padding: 12px 20px 12px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-.app-brand {
-  margin-bottom: 16px;
-  padding-top: 4px;
-}
-.app-brand h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--dark);
-  margin: 0 0 2px;
-  letter-spacing: -0.5px;
-}
-.app-brand p {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  margin: 0;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  opacity: 0.9;
 }
 
 .icon-btn {

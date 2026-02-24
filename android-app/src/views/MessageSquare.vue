@@ -40,7 +40,7 @@
                 <small>复制</small>
               </button>
               <button class="action-btn action-download" v-if="m.file_url" @click="openBrowser(fileURL('/api/file/' + m.file_url))">
-                <span>⬇️</span>
+                <span>📥</span>
                 <small>下载</small>
               </button>
               <button class="action-btn action-delete" @click="deleteMsg(m.id)">
