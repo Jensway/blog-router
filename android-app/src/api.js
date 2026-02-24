@@ -116,7 +116,7 @@ export const api = {
   async uploadFile(file) {
     const base = getBaseURL()
     if (!base) throw new Error('请先设置服务器地址')
-    const url = `${base}/api/posts`
+    const url = `${base}/api/upload`
     const headers = getAuthHeaders()
 
     // When running natively, WebView FormData fails often.

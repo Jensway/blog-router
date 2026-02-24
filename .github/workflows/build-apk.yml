@@ -37,9 +37,9 @@ jobs:
         run: |
           npm install @capacitor/assets --save-dev
           mkdir -p assets
-          cp "public/app icon 3.png" assets/icon-only.png
-          cp "public/app icon 3.png" assets/icon-foreground.png
-          cp "public/app icon 3.png" assets/icon-background.png
+          cp "public/app icon 4.png" assets/icon-only.png
+          cp "public/app icon 4.png" assets/icon-foreground.png
+          cp "public/app icon 4.png" assets/icon-background.png
           npx @capacitor/assets generate --android
 
       - name: 构建前端

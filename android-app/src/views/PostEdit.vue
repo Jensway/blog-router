@@ -83,11 +83,11 @@ onMounted(async () => {
         // server returns safe_content and content, we need the raw content for editing
         content: (data.content || '')
           .replace(
-            /src=['"]?.*?(\/api\/file\/[^\s"'>]+).*?['"]?/g,
-            (match, path) => `src="${fileURL(path)}"`
+            /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
+            (match, quote, path) => `src="${fileURL(path)}"`
           )
           .replace(
-            /!\[(.*?)\]\(.*?(\/api\/file\/[^\)?\s]+).*?\)/g,
+            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
             (match, alt, path) => `![${alt}](${fileURL(path)})`
           ),
         content_type: 'html', // ensure we save back as html
