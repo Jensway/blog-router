@@ -1,6 +1,11 @@
 <template>
   <div class="page">
     <header class="header blur-header">
+      <div class="app-brand">
+        <h2>数字花园</h2>
+        <p>Digital Garden</p>
+      </div>
+
       <div class="tabs">
         <div class="tab-indicator" :style="{ 
           transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
@@ -30,6 +35,10 @@
             <span class="title">{{ postTitle(p) }}</span>
             <div class="meta-row">
               <span class="meta-date">{{ p.updated_at || p.created_at }}</span>
+              <span v-if="p.category" class="meta-badge category-badge">{{ p.category }}</span>
+              <template v-if="getTags(p).length > 0">
+                <span v-for="tag in getTags(p)" :key="tag" class="meta-badge tag-badge">{{ tag }}</span>
+              </template>
               <span v-if="currentTab === 'trash'" class="meta-badge trash-badge">已删除</span>
             </div>
           </div>
@@ -92,6 +101,13 @@ function postTitle(p) {
   return '日志 #' + (p && p.id ? p.id : '')
 }
 
+function getTags(p) {
+  if (!p || !p.tags) return []
+  if (Array.isArray(p.tags)) return p.tags
+  if (typeof p.tags === 'string') return p.tags.split(',').map(s => s.trim()).filter(Boolean)
+  return []
+}
+
 function goPost(id) {
   router.push('/posts/' + id)
 }
@@ -117,29 +133,29 @@ onMounted(load)
   background: rgba(248, 250, 252, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 16px 20px 12px;
+  padding: 12px 20px 12px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.app-brand {
   margin-bottom: 16px;
+  padding-top: 4px;
 }
-
-.header-content h1 { 
-  font-size: 28px; 
-  font-weight: 800; 
-  letter-spacing: -0.5px;
+.app-brand h2 {
+  font-size: 24px;
+  font-weight: 800;
   color: var(--dark);
-  margin: 0;
+  margin: 0 0 2px;
+  letter-spacing: -0.5px;
 }
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.app-brand p {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 .icon-btn {
@@ -244,20 +260,35 @@ onMounted(load)
 .meta-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .meta-date {
   font-size: 13px;
   color: #94a3b8;
 }
+.meta-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.category-badge {
+  background: #f0f9ff;
+  color: var(--primary-dark);
+  border: 1px solid #e0f2fe;
+}
+.tag-badge {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
 .trash-badge {
   background: #fef2f2;
   color: var(--danger);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
+  border: 1px solid #fee2e2;
 }
 
 .item-arrow {

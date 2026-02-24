@@ -400,7 +400,7 @@ onMounted(load)
 }
 .action-btn span { font-size: 20px; margin-bottom: 4px; }
 .action-copy { background: var(--primary-light); }
-.action-download { background: var(--secondary); }
+.action-download { background: #10b981; } /* Emerald */
 .action-delete { background: var(--danger); }
 
 .msg-head { 

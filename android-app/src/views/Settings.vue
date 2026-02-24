@@ -28,7 +28,7 @@
         <div class="setting-item">
           <div class="setting-info">
             <span class="setting-name">开发者</span>
-            <span class="setting-desc">Jensway / GPT-4o Mobile Core</span>
+            <span class="setting-desc">Antigravity (GPT-4o) / Jensway</span>
           </div>
         </div>
       </div>

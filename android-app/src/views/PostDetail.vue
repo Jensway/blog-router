@@ -66,10 +66,10 @@ onMounted(async () => {
   try {
     post.value = await api.getPost(id)
     if (post.value.safe_content || post.value.content) {
-      // Fix HTML img tags: match any src containing /api/file/ and strip old IPs/tokens
+      // Fix HTML img tags: aggressively extract /api/file/... regardless of quotes or trailing parameters
       post.value.safe_content = (post.value.safe_content || post.value.content || '')
         .replace(
-          /src=".*?(\/api\/file\/[^"?]+).*?"/g,
+          /src=['"]?.*?(\/api\/file\/[^"?'\s>]+).*?['"]?/g,
           (match, path) => `src="${fileURL(path)}"`
         )
         // Fix Markdown img tags: match ![alt](.../api/file/...)
