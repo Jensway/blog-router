@@ -29,7 +29,7 @@
 <script setup>
 import { ref, onMounted, inject, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, fileURL } from '../api'
+import { api, fileURL, getBaseURL } from '../api'
 import Editor from '@tinymce/tinymce-vue'
 
 const route = useRoute()
@@ -50,6 +50,23 @@ const post = ref({
   source: 'android-app'
 })
 
+/** 统一重写所有 img src：相对路径 → /api/file/ 前缀 + baseURL + token */
+function rewriteImageSrcs(html) {
+  if (!html) return html
+  const base = getBaseURL()
+  return html.replace(
+    /(<img\s[^>]*?src\s*=\s*["'])([^"']+)(["'][^>]*>)/gi,
+    (match, before, src, after) => {
+      if (/^(https?:|data:|blob:)/i.test(src)) return match
+      if (src.includes('/api/file/')) {
+        return before + encodeURI(fileURL(src)) + after
+      }
+      const cleaned = src.replace(/^\.?\//, '')
+      return before + encodeURI(fileURL('/api/file/' + cleaned)) + after
+    }
+  )
+}
+
 const editorConfig = {
   plugins: 'link image lists table code wordcount',
   toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code',
@@ -65,20 +82,15 @@ const editorConfig = {
     const images = doc.querySelectorAll('img')
     images.forEach(async (img) => {
       const src = img.getAttribute('src')
-      if (!src || !src.includes('/api/file/')) return
-      
-      // Intercept ALL /api/file/ images to force WebView to render them regardless of backend's Content-Type (octet-stream)
+      if (!src || src.startsWith('blob:') || src.startsWith('data:')) return
+      // Blob 转换所有远程图片以绕过 WebView MIME 拦截
       try {
-        const res = await fetch(encodeURI(decodeURI(src)))
+        const res = await fetch(src)
         if (res.ok) {
           const blob = await res.blob()
-          // Re-wrap the blob with an explicit image MIME type to bypass WebView strict sniffing
-          const imageBlob = new Blob([blob], { type: 'image/png' })
-          img.src = URL.createObjectURL(imageBlob)
+          img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
         }
-      } catch (err) {
-        console.error('Failed to intercept image in editor:', err)
-      }
+      } catch (_) {}
     })
   },
   images_upload_handler: async (blobInfo) => {
@@ -102,16 +114,8 @@ onMounted(async () => {
       const data = await api.getPost(postId)
       post.value = {
         title: data.title || '',
-        // server returns safe_content and content, we need the raw content for editing
-        content: (data.content || '')
-          .replace(
-            /src=(['"])[^'"]*?(\/api\/file\/[^'"]+)[^'"]*\1/gi,
-            (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
-          )
-          .replace(
-            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)]+)\)/gi,
-            (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
-          ),
+        // 统一重写所有图片 src —— 包括相对路径和 /api/file/ 路径
+        content: rewriteImageSrcs(data.content || ''),
         content_type: 'html', // ensure we save back as html
         is_draft: data.is_draft || false,
         source: 'android-app'

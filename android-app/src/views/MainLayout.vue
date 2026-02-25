@@ -102,10 +102,8 @@ function exitApp() {
   align-items: center;
 }
 .brand-img {
-  height: 44px;
-  width: auto;
-  min-width: 120px;
-  max-width: 70vw;
+  height: 40px;
+  width: 160px;  /* 4:1 aspect ratio, matching Logo3.png (800x200) */
   object-fit: contain;
   flex-shrink: 0;
   display: block;

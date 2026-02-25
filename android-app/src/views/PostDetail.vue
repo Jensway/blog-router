@@ -46,9 +46,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, inject } from 'vue'
+import { ref, onMounted, nextTick, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, fileURL } from '../api'
+import { api, fileURL, getBaseURL } from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +58,48 @@ const loading = ref(true)
 const error = ref('')
 const processing = ref(false)
 
+/**
+ * 核心：将服务器返回的 HTML 中所有 img src 注入完整的服务器绝对地址 + token
+ * 分三类处理：
+ *   A) src 已经含 /api/file/  → 直接拼 baseURL + token
+ *   B) src 是一个不带协议的相对路径（如 "Pasted image.png"）→ 当作 uploads 目录下的文件
+ *   C) src 已经是 http:// 或 data: 的完整地址 → 不处理
+ */
+function rewriteImageSrcs(html) {
+  if (!html) return html
+  const base = getBaseURL()
+  return html.replace(
+    /(<img\s[^>]*?src\s*=\s*["'])([^"']+)(["'][^>]*>)/gi,
+    (match, before, src, after) => {
+      // 跳过已是绝对地址、data URI、blob URI
+      if (/^(https?:|data:|blob:)/i.test(src)) return match
+      // A) 含 /api/file/ 的相对路径
+      if (src.includes('/api/file/')) {
+        return before + encodeURI(fileURL(src)) + after
+      }
+      // B) 纯文件名或短相对路径 → 尝试加上 /api/file/ 前缀
+      const cleaned = src.replace(/^\.?\//, '') // 去掉开头的 ./ 或 /
+      return before + encodeURI(fileURL('/api/file/' + cleaned)) + after
+    }
+  )
+}
+
+/**
+ * 对所有图片做 Blob 转换兜底
+ * 解决 Android WebView 拒绝渲染 application/octet-stream 的问题
+ */
+async function blobifyImage(img) {
+  const src = img.getAttribute('src')
+  if (!src || src.startsWith('blob:') || src.startsWith('data:')) return
+  try {
+    const res = await fetch(src)
+    if (res.ok) {
+      const blob = await res.blob()
+      img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
+    }
+  } catch (_) { /* 静默失败 */ }
+}
+
 onMounted(async () => {
   const id = route.params.id
   if (!id) return
@@ -65,47 +107,31 @@ onMounted(async () => {
   error.value = ''
   try {
     post.value = await api.getPost(id)
-    if (post.value.safe_content || post.value.content) {
-      // Fix HTML img tags: aggressively extract /api/file/... regardless of quotes or trailing parameters
-        post.value.safe_content = (post.value.safe_content || post.value.content || '')
-          .replace(
-            /src=(['"])[^'"]*?(\/api\/file\/[^'"]+)[^'"]*\1/gi,
-            (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
-          )
-          // Fix Markdown img tags: match ![alt](.../api/file/...)
-          .replace(
-            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)]+)\)/gi,
-            (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
-          )
-    }
-    
-    // Auto-highlight code blocks if Prism is loaded
+    // Phase 1: 字符串级别重写所有 img src
+    const raw = post.value.safe_content || post.value.content || ''
+    post.value.safe_content = rewriteImageSrcs(raw)
+
+    // Phase 2: DOM 渲染完成后，给每张图加 onerror 兜底
+    await nextTick()
     setTimeout(() => {
-      if (window.Prism) {
-        window.Prism.highlightAll()
-      }
-      
-      // Intercept octet-stream extensionless images for Android WebView
+      if (window.Prism) window.Prism.highlightAll()
       const images = document.querySelectorAll('.content img')
-      images.forEach(async (img) => {
-        const src = img.getAttribute('src')
-        if (!src || !src.includes('/api/file/')) return
-        
-        // Intercept ALL /api/file/ images to force WebView to render them regardless of backend's Content-Type (octet-stream)
-        try {
-          // Decode first in case the src is already partially encoded, then encode
-          const res = await fetch(encodeURI(decodeURI(src)))
-          if (res.ok) {
-            const blob = await res.blob()
-            // Re-wrap the blob with an explicit image MIME type to bypass WebView strict sniffing
-            const imageBlob = new Blob([blob], { type: 'image/png' })
-            img.src = URL.createObjectURL(imageBlob)
+      images.forEach((img) => {
+        // 对所有远程图以 blob 方式重新加载，彻底绕过 WebView MIME 拦截
+        blobifyImage(img)
+        // 如果 blob 也失败，onerror 里再试一次加 /api/file/ 前缀
+        img.onerror = function () {
+          const curSrc = this.getAttribute('src')
+          if (!curSrc || curSrc.startsWith('blob:')) return
+          this.onerror = null // 防止死循环
+          const base = getBaseURL()
+          if (base && !curSrc.startsWith(base)) {
+            const name = curSrc.split('/').pop()
+            this.src = encodeURI(fileURL('/api/file/' + name))
           }
-        } catch (err) {
-          console.error('Failed to intercept image:', err)
         }
       })
-    }, 150)
+    }, 200)
   } catch (e) {
     error.value = e.message
   } finally {
