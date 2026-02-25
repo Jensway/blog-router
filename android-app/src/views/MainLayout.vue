@@ -2,8 +2,9 @@
   <div class="main-layout">
     <!-- Universal Brand Header -->
     <header class="app-brand blur-header">
-      <h2>数字花园</h2>
-      <p>Digital Garden</p>
+      <div class="brand-logo">
+        <h2 class="en-title">Digital Garden</h2>
+      </div>
     </header>
 
     <!-- iOS/Android Style Top Navigation Bar -->
@@ -21,7 +22,9 @@
       </router-link>
 
       <button class="nav-item exit-btn" @click="exitApp">
-        <span class="nav-label">退出</span>
+        <div class="nav-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-power"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>
+        </div>
       </button>
     </nav>
 
@@ -93,22 +96,24 @@ function exitApp() {
 
 .app-brand {
   padding-top: 4px;
+  display: flex;
+  align-items: center;
 }
-.app-brand h2 {
-  font-size: 24px;
+.brand-logo {
+  display: flex;
+  flex-direction: column;
+}
+.en-title {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 26px;
   font-weight: 800;
+  font-style: italic;
   color: var(--dark);
-  margin: 0 0 2px;
-  letter-spacing: -0.5px;
-}
-.app-brand p {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
   margin: 0;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  opacity: 0.9;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .nav-item {
@@ -151,13 +156,23 @@ function exitApp() {
   color: var(--danger);
   cursor: pointer;
   opacity: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.exit-btn .nav-label {
-  font-size: 14px;
-  font-weight: 500;
+.nav-icon-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: var(--danger);
+  transition: all 0.2s;
 }
-.exit-btn:active {
-  transform: scale(0.95);
+.exit-btn:active .nav-icon-box {
+  transform: scale(0.9);
+  background: #fca5a5;
 }
 
 </style>

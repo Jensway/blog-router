@@ -59,6 +59,31 @@ const editorConfig = {
   width: '100%',
   language: 'zh_CN',
   placeholder: '在这里写下你的日志正文...',
+  init_instance_callback: function (editor) {
+    const doc = editor.getDoc()
+    if (!doc) return
+    const images = doc.querySelectorAll('img')
+    images.forEach(async (img) => {
+      const src = img.getAttribute('src')
+      if (!src || !src.includes('/api/file/')) return
+      
+      const pathMatch = src.split('?')[0]
+      const hasExtension = /\.(png|jpe?g|gif|webp|svg)$/i.test(pathMatch)
+      
+      if (!hasExtension) {
+        try {
+          const res = await fetch(src)
+          if (res.ok) {
+            const blob = await res.blob()
+            const imageBlob = new Blob([blob], { type: 'image/png' })
+            img.src = URL.createObjectURL(imageBlob)
+          }
+        } catch (err) {
+          console.error('Failed to intercept extensionless image in editor:', err)
+        }
+      }
+    })
+  },
   images_upload_handler: async (blobInfo) => {
     try {
       const res = await api.uploadFile(blobInfo.blob())

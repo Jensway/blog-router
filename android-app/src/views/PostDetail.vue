@@ -84,7 +84,33 @@ onMounted(async () => {
       if (window.Prism) {
         window.Prism.highlightAll()
       }
-    }, 100)
+      
+      // Intercept octet-stream extensionless images for Android WebView
+      const images = document.querySelectorAll('.content img')
+      images.forEach(async (img) => {
+        const src = img.getAttribute('src')
+        if (!src || !src.includes('/api/file/')) return
+        
+        // Check if it lacks a standard image extension before the query parameters
+        const pathMatch = src.split('?')[0]
+        const hasExtension = /\.(png|jpe?g|gif|webp|svg)$/i.test(pathMatch)
+        
+        if (!hasExtension) {
+          try {
+            // Fetch the image natively to bypass WebView's octet-stream MIME rejection
+            const res = await fetch(src)
+            if (res.ok) {
+              const blob = await res.blob()
+              // Re-wrap the blob with an explicit image MIME type
+              const imageBlob = new Blob([blob], { type: 'image/png' })
+              img.src = URL.createObjectURL(imageBlob)
+            }
+          } catch (err) {
+            console.error('Failed to intercept extensionless image:', err)
+          }
+        }
+      })
+    }, 150)
   } catch (e) {
     error.value = e.message
   } finally {
