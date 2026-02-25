@@ -124,15 +124,17 @@ onMounted(async () => {
       images.forEach((img) => {
         // 对所有远程图以 blob 方式重新加载，彻底绕过 WebView MIME 拦截
         blobifyImage(img)
-        // 如果 blob 也失败，onerror 里再试一次加 /api/file/ 前缀
         img.onerror = function () {
-          const curSrc = this.getAttribute('src')
+          const curSrc = this.src || this.getAttribute('src') || ''
           if (!curSrc || curSrc.startsWith('blob:')) return
           this.onerror = null // 防止死循环
           const base = getBaseURL()
-          if (base && !curSrc.startsWith(base)) {
-            const name = curSrc.split('/').pop()
-            this.src = encodeURI(fileURL('/api/file/' + name))
+          if (base) {
+            let name = curSrc.split('/').pop()
+            name = name.split('?')[0] // remove corrupted query strings
+            name = decodeURIComponent(name) // decode %20 back to spaces
+            // Re-encode freshly via fileURL
+            this.src = fileURL('/api/file/' + encodeURIComponent(name))
           }
         }
       })

@@ -102,9 +102,11 @@ function exitApp() {
   align-items: center;
 }
 .brand-img {
-  height: 40px;
-  width: 160px;  /* 4:1 aspect ratio, matching Logo3.png (800x200) */
+  height: 48px;
+  max-width: 65vw;
+  width: auto;
   object-fit: contain;
+  object-position: left center;
   flex-shrink: 0;
   display: block;
 }

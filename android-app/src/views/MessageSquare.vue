@@ -552,6 +552,23 @@ onActivated(load)
   cursor: pointer;
 }
 
+.file-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  height: 16px;
+  width: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
 .send-bar {
   display: flex;
   gap: 8px;
