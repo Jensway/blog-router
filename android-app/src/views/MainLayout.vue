@@ -102,10 +102,13 @@ function exitApp() {
   align-items: center;
 }
 .brand-img {
-  height: 36px;
+  height: 44px;
   width: auto;
-  max-width: 90vw;
+  min-width: 120px;
+  max-width: 70vw;
   object-fit: contain;
+  flex-shrink: 0;
+  display: block;
 }
 
 .nav-item {

@@ -119,63 +119,24 @@ export const api = {
     const url = `${base}/api/upload`
     const headers = getAuthHeaders()
 
-    // When running natively, WebView FormData fails often.
-    // Try to convert to Base64 and use CapacitorHttp, OR fallback gracefully.
     try {
-      // 1) Get base64 representation of the file
-      const buffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(buffer)
-      let binary = ''
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i])
-      }
-      const b64Data = btoa(binary)
-
-      // 2) Construct raw multipart-form payload manually since CapacitorHttp 
-      // is safer with Raw base64 form-data injections than JS FormData
-      const boundary = '----CapacitorFormBoundary' + Math.random().toString(36).substring(2)
-
-      let bodyData = `--${boundary}\r\n`
-      bodyData += `Content-Disposition: form-data; name="file"; filename="${file.name}"\r\n`
-      bodyData += `Content-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`
-
-      const payload = bodyData + binary + `\r\n--${boundary}--\r\n`
-      // For binary concatenation strings safely in fetch:
-      // However since CapacitorHttp in v6 natively supports form uploads better:
-
       const formData = new FormData()
       formData.append('file', file)
 
-      if (window.Capacitor && window.Capacitor.isNative) {
-        // Native device: use CapacitorHttp to avoid WebView mangling Boundaries
-        const options = {
-          url: url,
-          headers: headers,
-          data: formData, // CapacitorHttp natively handles FormData boundary building
-        }
-        const response = await CapacitorHttp.post(options)
-
-        if (response.status !== 200 && response.status !== 201) {
-          let msg = '上传失败'
-          if (response.data && response.data.error) msg = response.data.error
-          throw new Error(msg)
-        }
-        return response.data
-      } else {
-        // Web execution: standard fetch
-        const res = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: formData
-        })
-        const text = await res.text()
-        if (!res.ok) {
-          let msg = '上传失败'
-          try { const j = JSON.parse(text); if (j.error) msg = j.error } catch (_) { }
-          throw new Error(msg)
-        }
-        return JSON.parse(text)
+      // Standard browser fetch natively handles FormData boundaries securely inside Android WebViews
+      // without needing CapacitorHttp, bypassing the 400 backend payload error.
+      const res = await fetch(url, {
+        method: 'POST',
+        headers, // Do NOT set Content-Type, let the browser inject the multipart boundary
+        body: formData
+      })
+      const text = await res.text()
+      if (!res.ok) {
+        let msg = '上传失败'
+        try { const j = JSON.parse(text); if (j.error) msg = j.error } catch (_) {}
+        throw new Error(msg)
       }
+      return JSON.parse(text)
     } catch (e) {
       throw new Error('上传出错: ' + (e.message || e))
     }

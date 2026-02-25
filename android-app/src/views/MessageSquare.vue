@@ -104,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, inject, onUnmounted } from 'vue'
+import { ref, onMounted, onActivated, inject, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fileURL } from '../api'
 import { Clipboard } from '@capacitor/clipboard'
@@ -311,6 +311,7 @@ async function send() {
 }
 
 onMounted(load)
+onActivated(load)
 </script>
 
 <style scoped>

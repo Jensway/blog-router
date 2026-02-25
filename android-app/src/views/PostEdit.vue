@@ -67,20 +67,17 @@ const editorConfig = {
       const src = img.getAttribute('src')
       if (!src || !src.includes('/api/file/')) return
       
-      const pathMatch = src.split('?')[0]
-      const hasExtension = /\.(png|jpe?g|gif|webp|svg)$/i.test(pathMatch)
-      
-      if (!hasExtension) {
-        try {
-          const res = await fetch(encodeURI(decodeURI(src)))
-          if (res.ok) {
-            const blob = await res.blob()
-            const imageBlob = new Blob([blob], { type: 'image/png' })
-            img.src = URL.createObjectURL(imageBlob)
-          }
-        } catch (err) {
-          console.error('Failed to intercept extensionless image in editor:', err)
+      // Intercept ALL /api/file/ images to force WebView to render them regardless of backend's Content-Type (octet-stream)
+      try {
+        const res = await fetch(encodeURI(decodeURI(src)))
+        if (res.ok) {
+          const blob = await res.blob()
+          // Re-wrap the blob with an explicit image MIME type to bypass WebView strict sniffing
+          const imageBlob = new Blob([blob], { type: 'image/png' })
+          img.src = URL.createObjectURL(imageBlob)
         }
+      } catch (err) {
+        console.error('Failed to intercept image in editor:', err)
       }
     })
   },
