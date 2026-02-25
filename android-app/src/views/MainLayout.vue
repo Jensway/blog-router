@@ -3,8 +3,11 @@
     <!-- Universal Brand Header -->
     <header class="app-brand blur-header">
       <div class="brand-logo">
-        <img src="/Logo.png" class="brand-img" alt="logo" />
+        <img src="/Logo3.png" class="brand-img" alt="logo" />
       </div>
+      <button class="header-exit-btn" @click="exitApp" title="退出">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+      </button>
     </header>
 
     <!-- iOS/Android Style Top Navigation Bar -->
@@ -20,12 +23,6 @@
       <router-link to="/settings" class="nav-item" active-class="active">
         <span class="nav-label">设置</span>
       </router-link>
-
-      <button class="nav-item exit-btn" @click="exitApp">
-        <div class="nav-icon-box" title="退出">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-        </div>
-      </button>
     </nav>
 
     <!-- Router View for the Tabs -->
@@ -98,12 +95,11 @@ function exitApp() {
   padding-top: 4px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 .brand-logo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
 }
 .brand-img {
   height: 36px;
@@ -146,15 +142,10 @@ function exitApp() {
   border-radius: 3px 3px 0 0;
 }
 
-.exit-btn {
+.header-exit-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.nav-icon-box {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -162,8 +153,10 @@ function exitApp() {
   border-radius: 50%;
   color: #64748b;
   transition: all 0.2s;
+  background: #f8fafc;
+  outline: 1px solid #e2e8f0;
 }
-.exit-btn:active .nav-icon-box {
+.header-exit-btn:active {
   transform: scale(0.9);
   background: #f1f5f9;
 }

@@ -72,7 +72,7 @@ const editorConfig = {
       
       if (!hasExtension) {
         try {
-          const res = await fetch(encodeURI(src))
+          const res = await fetch(encodeURI(decodeURI(src)))
           if (res.ok) {
             const blob = await res.blob()
             const imageBlob = new Blob([blob], { type: 'image/png' })
@@ -108,11 +108,11 @@ onMounted(async () => {
         // server returns safe_content and content, we need the raw content for editing
         content: (data.content || '')
           .replace(
-            /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
+            /src=(['"])[^'"]*?(\/api\/file\/[^'"]+)[^'"]*\1/gi,
             (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
           )
           .replace(
-            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
+            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)]+)\)/gi,
             (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
           ),
         content_type: 'html', // ensure we save back as html

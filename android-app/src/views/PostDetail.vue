@@ -69,12 +69,12 @@ onMounted(async () => {
       // Fix HTML img tags: aggressively extract /api/file/... regardless of quotes or trailing parameters
         post.value.safe_content = (post.value.safe_content || post.value.content || '')
           .replace(
-            /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
+            /src=(['"])[^'"]*?(\/api\/file\/[^'"]+)[^'"]*\1/gi,
             (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
           )
           // Fix Markdown img tags: match ![alt](.../api/file/...)
           .replace(
-            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
+            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)]+)\)/gi,
             (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
           )
     }
@@ -97,8 +97,8 @@ onMounted(async () => {
         
         if (!hasExtension) {
           try {
-            // Fetch the image natively to bypass WebView's octet-stream MIME rejection
-            const res = await fetch(encodeURI(src))
+            // Decode first in case the src is already partially encoded, then encode
+            const res = await fetch(encodeURI(decodeURI(src)))
             if (res.ok) {
               const blob = await res.blob()
               // Re-wrap the blob with an explicit image MIME type
