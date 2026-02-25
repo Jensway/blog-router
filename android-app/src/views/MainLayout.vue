@@ -103,9 +103,12 @@ function exitApp() {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
 }
 .brand-img {
-  height: 38px;
+  height: 36px;
+  width: auto;
+  max-width: 90vw;
   object-fit: contain;
 }
 
