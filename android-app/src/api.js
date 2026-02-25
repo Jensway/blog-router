@@ -19,13 +19,13 @@ export function setConfig(baseURL, apiToken) {
 
 export function getAuthHeaders() {
   const c = getConfig()
-  if (!c?.baseURL || !c?.apiToken) return {}
+  if (!c || !c.baseURL || !c.apiToken) return {}
   return { 'X-API-Token': c.apiToken }
 }
 
 export function getBaseURL() {
   const c = getConfig()
-  return c?.baseURL || ''
+  return c ? c.baseURL || '' : ''
 }
 
 async function request(path, options = {}) {

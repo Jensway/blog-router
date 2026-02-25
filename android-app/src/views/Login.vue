@@ -54,8 +54,9 @@ import { setConfig, getConfig, api } from '../api'
 
 const router = useRouter()
 // Set default to requested URL if not already configured
-const baseURL = ref(getConfig()?.baseURL || 'https://msg.fulioa.com')
-const apiToken = ref(getConfig()?.apiToken || '')
+const c = getConfig()
+const baseURL = ref(c ? (c.baseURL || 'https://msg.fulioa.com') : 'https://msg.fulioa.com')
+const apiToken = ref(c ? (c.apiToken || '') : '')
 const loading = ref(false)
 const error = ref('')
 

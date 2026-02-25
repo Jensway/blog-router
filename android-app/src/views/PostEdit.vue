@@ -90,18 +90,18 @@ const editorConfig = {
     const doc = editor.getDoc()
     if (!doc) return
     const images = doc.querySelectorAll('img')
-    images.forEach(async (img) => {
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]
       const src = img.getAttribute('src')
-      if (!src || src.startsWith('blob:') || src.startsWith('data:')) return
+      if (!src || src.startsWith('blob:') || src.startsWith('data:')) continue
       // Blob 转换所有远程图片以绕过 WebView MIME 拦截
-      try {
-        const res = await fetch(src)
-        if (res.ok) {
-          const blob = await res.blob()
-          img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
-        }
-      } catch (_) {}
-    })
+      fetch(src).then(res => {
+        if (res.ok) return res.blob()
+        throw new Error('Not OK')
+      }).then(blob => {
+        img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
+      }).catch(() => {})
+    }
   },
   images_upload_handler: async (blobInfo) => {
     try {

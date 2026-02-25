@@ -10,12 +10,12 @@ import Settings from '../views/Settings.vue' // Will be created
 import PostEdit from '../views/PostEdit.vue'
 
 const routes = [
-  { path: '/', redirect: () => (getConfig()?.apiToken ? '/posts' : '/login') },
+  { path: '/', redirect: () => { const c = getConfig(); return (c && c.apiToken) ? '/posts' : '/login' } },
   { path: '/login', component: Login },
-  
+
   // Tab Layout Routes
-  { 
-    path: '/', 
+  {
+    path: '/',
     component: MainLayout,
     children: [
       { path: 'posts', component: PostList },
@@ -37,7 +37,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const config = getConfig()
-  const hasAuth = config?.baseURL && config?.apiToken
+  const hasAuth = config && config.baseURL && config.apiToken
   if (to.path === '/login') {
     if (hasAuth) next('/posts')
     else next()
