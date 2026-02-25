@@ -3,7 +3,7 @@
     <!-- Universal Brand Header -->
     <header class="app-brand blur-header">
       <div class="brand-logo">
-        <img src="/logo.png" class="brand-img" alt="logo" />
+        <img src="/Logo.png" class="brand-img" alt="logo" />
       </div>
     </header>
 
