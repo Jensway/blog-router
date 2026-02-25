@@ -75,6 +75,7 @@
           
           <button class="attach-btn" @click="$refs.fileInput.click()" title="发送图片/文件" :disabled="sending">
             <span class="attach-icon">📎</span>
+            <span v-if="selectedFile" class="file-badge">1</span>
           </button>
           
           <button class="paste-btn" @click="pasteFromClipboard" title="一键粘贴" :disabled="sending">
