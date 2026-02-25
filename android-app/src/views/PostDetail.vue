@@ -93,10 +93,11 @@ function rewriteImageSrcs(html) {
  * 解决 Android WebView 拒绝渲染 application/octet-stream 的问题
  */
 async function blobifyImage(img) {
-  const src = img.getAttribute('src')
-  if (!src || src.startsWith('blob:') || src.startsWith('data:')) return
+  const originalSrc = img.getAttribute('src')
+  if (!originalSrc || originalSrc.startsWith('blob:') || originalSrc.startsWith('data:')) return
   try {
-    const res = await fetch(src)
+    // img.src forces browser to yield fully URI-encoded absolute path 
+    const res = await fetch(img.src)
     if (res.ok) {
       const blob = await res.blob()
       img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))

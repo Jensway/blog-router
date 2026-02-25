@@ -119,51 +119,29 @@ export const api = {
     const url = `${base}/api/upload`
     const headers = getAuthHeaders()
 
-    // 用 XMLHttpRequest 手动构建 multipart 请求体
-    // 完全绕过 Capacitor 对 fetch/FormData 的劫持，确保 boundary 完整传达后端
     return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2)
-        const fileBytes = new Uint8Array(reader.result)
+      const fd = new FormData()
+      fd.append('file', file)
 
-        // 构造 multipart body: 头部(text) + 文件内容(binary) + 尾部(text)
-        const headerStr = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`
-        const footerStr = `\r\n--${boundary}--\r\n`
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', url, true)
+      Object.keys(headers).forEach(k => xhr.setRequestHeader(k, headers[k]))
 
-        const headerBytes = new TextEncoder().encode(headerStr)
-        const footerBytes = new TextEncoder().encode(footerStr)
-
-        // 拼接成一个完整的 Uint8Array
-        const body = new Uint8Array(headerBytes.length + fileBytes.length + footerBytes.length)
-        body.set(headerBytes, 0)
-        body.set(fileBytes, headerBytes.length)
-        body.set(footerBytes, headerBytes.length + fileBytes.length)
-
-        const xhr = new XMLHttpRequest()
-        xhr.open('POST', url, true)
-        xhr.setRequestHeader('Content-Type', `multipart/form-data; boundary=${boundary}`)
-        // 注入认证头
-        Object.keys(headers).forEach(k => xhr.setRequestHeader(k, headers[k]))
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText))
-            } catch (_) {
-              resolve({ url: xhr.responseText })
-            }
-          } else {
-            let msg = '上传失败'
-            try { const j = JSON.parse(xhr.responseText); if (j.error) msg = j.error } catch (_) { }
-            reject(new Error(msg))
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText))
+          } catch (_) {
+            resolve({ url: xhr.responseText })
           }
+        } else {
+          let msg = '上传失败'
+          try { const j = JSON.parse(xhr.responseText); if (j.error) msg = j.error } catch (_) { }
+          reject(new Error(msg))
         }
-        xhr.onerror = () => reject(new Error('上传出错: 网络错误'))
-        xhr.send(body.buffer)
       }
-      reader.onerror = () => reject(new Error('读取文件失败'))
-      reader.readAsArrayBuffer(file)
+      xhr.onerror = () => reject(new Error('上传出错: 网络错误'))
+      xhr.send(fd)
     })
   },
 }

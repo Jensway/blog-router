@@ -92,10 +92,10 @@ const editorConfig = {
     const images = doc.querySelectorAll('img')
     for (let i = 0; i < images.length; i++) {
       const img = images[i]
-      const src = img.getAttribute('src')
-      if (!src || src.startsWith('blob:') || src.startsWith('data:')) continue
+      const originalSrc = img.getAttribute('src')
+      if (!originalSrc || originalSrc.startsWith('blob:') || originalSrc.startsWith('data:')) continue
       // Blob 转换所有远程图片以绕过 WebView MIME 拦截
-      fetch(src).then(res => {
+      fetch(img.src).then(res => {
         if (res.ok) return res.blob()
         throw new Error('Not OK')
       }).then(blob => {
