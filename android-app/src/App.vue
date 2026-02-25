@@ -20,7 +20,7 @@ import { reactive, provide, onMounted } from 'vue'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useRouter } from 'vue-router'
 import { api } from './api'
-import { ShareExtension } from 'capacitor-share-extension'
+import { Capacitor } from '@capacitor/core'
 
 const toast = reactive({ show: false, text: '' })
 const router = useRouter()
@@ -58,6 +58,9 @@ onMounted(() => {
 
 async function checkIntent() {
   try {
+    const ShareExtension = Capacitor.Plugins.ShareExtension
+    if (!ShareExtension) return
+    
     const result = await ShareExtension.checkSendIntentReceived()
     if (result && (result.text || result.url)) {
       showToast('获取到分享内容')

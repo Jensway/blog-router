@@ -4,7 +4,6 @@
     <header class="app-brand blur-header">
       <div class="brand-logo">
         <img src="/logo.png" class="brand-img" alt="logo" />
-        <h2 class="en-title">Digital Garden</h2>
       </div>
     </header>
 
@@ -102,26 +101,12 @@ function exitApp() {
 }
 .brand-logo {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
 .brand-img {
-  width: 26px;
-  height: 26px;
+  height: 38px;
   object-fit: contain;
-}
-.en-title {
-  font-family: 'Georgia', 'Times New Roman', serif;
-  font-size: 24px;
-  font-weight: 800;
-  font-style: italic;
-  color: var(--dark);
-  margin: 0;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .nav-item {
