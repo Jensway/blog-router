@@ -50,21 +50,31 @@ const post = ref({
   source: 'android-app'
 })
 
-/** 统一重写所有 img src：相对路径 → /api/file/ 前缀 + baseURL + token */
+/** 统一重写所有 img src：采用 DOM 解析代替正则，兼容性最好 */
 function rewriteImageSrcs(html) {
   if (!html) return html
-  const base = getBaseURL()
-  return html.replace(
-    /(<img\s[^>]*?src\s*=\s*["'])([^"']+)(["'][^>]*>)/gi,
-    (match, before, src, after) => {
-      if (/^(https?:|data:|blob:)/i.test(src)) return match
+  try {
+    const base = getBaseURL()
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    const images = doc.querySelectorAll('img')
+    images.forEach(img => {
+      const src = img.getAttribute('src')
+      if (!src) return
+      const lower = src.toLowerCase()
+      if (lower.startsWith('http') || lower.startsWith('data:') || lower.startsWith('blob:')) return
+      
       if (src.includes('/api/file/')) {
-        return before + encodeURI(fileURL(src)) + after
+        img.setAttribute('src', encodeURI(fileURL(src)))
+      } else {
+        const cleaned = src.replace(/^\.?\//, '')
+        img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
       }
-      const cleaned = src.replace(/^\.?\//, '')
-      return before + encodeURI(fileURL('/api/file/' + cleaned)) + after
-    }
-  )
+    })
+    return doc.body.innerHTML
+  } catch (err) {
+    return html
+  }
 }
 
 const editorConfig = {

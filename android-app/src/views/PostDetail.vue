@@ -60,28 +60,32 @@ const processing = ref(false)
 
 /**
  * 核心：将服务器返回的 HTML 中所有 img src 注入完整的服务器绝对地址 + token
- * 分三类处理：
- *   A) src 已经含 /api/file/  → 直接拼 baseURL + token
- *   B) src 是一个不带协议的相对路径（如 "Pasted image.png"）→ 当作 uploads 目录下的文件
- *   C) src 已经是 http:// 或 data: 的完整地址 → 不处理
+ * 采用 DOM 解析代替正则，兼容性最好，避免部分老旧浏览器正则引擎报错
  */
 function rewriteImageSrcs(html) {
   if (!html) return html
-  const base = getBaseURL()
-  return html.replace(
-    /(<img\s[^>]*?src\s*=\s*["'])([^"']+)(["'][^>]*>)/gi,
-    (match, before, src, after) => {
-      // 跳过已是绝对地址、data URI、blob URI
-      if (/^(https?:|data:|blob:)/i.test(src)) return match
-      // A) 含 /api/file/ 的相对路径
+  try {
+    const base = getBaseURL()
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    const images = doc.querySelectorAll('img')
+    images.forEach(img => {
+      const src = img.getAttribute('src')
+      if (!src) return
+      const lower = src.toLowerCase()
+      if (lower.startsWith('http') || lower.startsWith('data:') || lower.startsWith('blob:')) return
+      
       if (src.includes('/api/file/')) {
-        return before + encodeURI(fileURL(src)) + after
+        img.setAttribute('src', encodeURI(fileURL(src)))
+      } else {
+        const cleaned = src.replace(/^\.?\//, '')
+        img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
       }
-      // B) 纯文件名或短相对路径 → 尝试加上 /api/file/ 前缀
-      const cleaned = src.replace(/^\.?\//, '') // 去掉开头的 ./ 或 /
-      return before + encodeURI(fileURL('/api/file/' + cleaned)) + after
-    }
-  )
+    })
+    return doc.body.innerHTML
+  } catch (err) {
+    return html
+  }
 }
 
 /**

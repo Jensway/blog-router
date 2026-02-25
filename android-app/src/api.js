@@ -172,7 +172,7 @@ export function fileURL(path) {
   if (!path) return ''
   const base = getBaseURL()
   const c = getConfig()
-  const token = c?.apiToken
+  const token = c ? c.apiToken : null
   let url = path.startsWith('http') ? path : (base ? `${base}${path}` : path)
   if (token && url.indexOf('?') === -1) url += '?token=' + encodeURIComponent(token)
   else if (token) url += '&token=' + encodeURIComponent(token)
