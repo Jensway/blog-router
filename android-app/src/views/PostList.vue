@@ -310,13 +310,13 @@ onMounted(load)
   position: fixed;
   right: 20px;
   bottom: calc(20px + var(--safe-bottom));
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
+  width: 42px;
+  height: 42px;
+  border-radius: 21px;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   border: none;
-  font-size: 24px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;

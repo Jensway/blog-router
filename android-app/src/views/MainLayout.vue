@@ -3,6 +3,7 @@
     <!-- Universal Brand Header -->
     <header class="app-brand blur-header">
       <div class="brand-logo">
+        <img src="/logo.png" class="brand-img" alt="logo" />
         <h2 class="en-title">Digital Garden</h2>
       </div>
     </header>
@@ -22,8 +23,8 @@
       </router-link>
 
       <button class="nav-item exit-btn" @click="exitApp">
-        <div class="nav-icon-box">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-power"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>
+        <div class="nav-icon-box" title="退出">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
         </div>
       </button>
     </nav>
@@ -101,11 +102,18 @@ function exitApp() {
 }
 .brand-logo {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.brand-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 .en-title {
   font-family: 'Georgia', 'Times New Roman', serif;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   font-style: italic;
   color: var(--dark);
@@ -153,9 +161,7 @@ function exitApp() {
 .exit-btn {
   background: transparent;
   border: none;
-  color: var(--danger);
   cursor: pointer;
-  opacity: 0.8;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -166,13 +172,12 @@ function exitApp() {
   align-items: center;
   padding: 6px;
   border-radius: 50%;
-  background: #fee2e2;
-  color: var(--danger);
+  color: #64748b;
   transition: all 0.2s;
 }
 .exit-btn:active .nav-icon-box {
   transform: scale(0.9);
-  background: #fca5a5;
+  background: #f1f5f9;
 }
 
 </style>

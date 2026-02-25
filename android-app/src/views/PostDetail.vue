@@ -67,16 +67,16 @@ onMounted(async () => {
     post.value = await api.getPost(id)
     if (post.value.safe_content || post.value.content) {
       // Fix HTML img tags: aggressively extract /api/file/... regardless of quotes or trailing parameters
-      post.value.safe_content = (post.value.safe_content || post.value.content || '')
-        .replace(
-          /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
-          (match, quote, path) => `src="${fileURL(path)}"`
-        )
-        // Fix Markdown img tags: match ![alt](.../api/file/...)
-        .replace(
-          /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
-          (match, alt, path) => `![${alt}](${fileURL(path)})`
-        )
+        post.value.safe_content = (post.value.safe_content || post.value.content || '')
+          .replace(
+            /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
+            (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
+          )
+          // Fix Markdown img tags: match ![alt](.../api/file/...)
+          .replace(
+            /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
+            (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
+          )
     }
     
     // Auto-highlight code blocks if Prism is loaded
@@ -98,7 +98,7 @@ onMounted(async () => {
         if (!hasExtension) {
           try {
             // Fetch the image natively to bypass WebView's octet-stream MIME rejection
-            const res = await fetch(src)
+            const res = await fetch(encodeURI(src))
             if (res.ok) {
               const blob = await res.blob()
               // Re-wrap the blob with an explicit image MIME type

@@ -72,7 +72,7 @@ const editorConfig = {
       
       if (!hasExtension) {
         try {
-          const res = await fetch(src)
+          const res = await fetch(encodeURI(src))
           if (res.ok) {
             const blob = await res.blob()
             const imageBlob = new Blob([blob], { type: 'image/png' })
@@ -109,11 +109,11 @@ onMounted(async () => {
         content: (data.content || '')
           .replace(
             /src=(['"])[^'"]*?(\/api\/file\/[^'"?]+)[^'"]*\1/gi,
-            (match, quote, path) => `src="${fileURL(path)}"`
+            (match, quote, path) => `src="${encodeURI(fileURL(path))}"`
           )
           .replace(
             /!\[(.*?)\]\([^)]*?(\/api\/file\/[^)?]+)[^)]*\)/gi,
-            (match, alt, path) => `![${alt}](${fileURL(path)})`
+            (match, alt, path) => `![${alt}](${encodeURI(fileURL(path))})`
           ),
         content_type: 'html', // ensure we save back as html
         is_draft: data.is_draft || false,
