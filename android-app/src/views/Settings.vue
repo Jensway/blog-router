@@ -35,6 +35,10 @@
       <div class="settings-group logout-group" @click="logout">
         <span class="logout-text">注销账号并重新登录</span>
       </div>
+
+      <div class="settings-group exit-group" @click="exitApp">
+        <span class="exit-text">退出并关闭应用</span>
+      </div>
       
       <div class="bottom-spacer"></div>
     </div>
@@ -45,6 +49,7 @@
 import { reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getConfig, setConfig } from '../api'
+import { App as CapacitorApp } from '@capacitor/app'
 
 const router = useRouter()
 const config = reactive({ baseURL: '', apiToken: '' })
@@ -61,6 +66,16 @@ function logout() {
   if (confirm('确定要注销当前账号吗？注销后需要重新填入服务器与API令牌。')) {
     setConfig('', '') 
     router.replace('/login')
+  }
+}
+
+function exitApp() {
+  if (confirm('确定要退出程序吗？')) {
+    if (window.Capacitor && window.Capacitor.isNative) {
+      CapacitorApp.exitApp()
+    } else {
+      window.close()
+    }
   }
 }
 </script>
@@ -85,18 +100,23 @@ function logout() {
   border: 1px solid #e2e8f0;
 }
 
-.logout-group {
+.logout-group, .exit-group {
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
 }
-.logout-group:active {
+.logout-group:active, .exit-group:active {
   background: #fef2f2;
 }
 .logout-text {
   color: var(--danger);
+  font-weight: 600;
+  font-size: 16px;
+}
+.exit-text {
+  color: #64748b;
   font-weight: 600;
   font-size: 16px;
 }

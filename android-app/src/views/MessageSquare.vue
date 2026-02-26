@@ -311,12 +311,18 @@ async function send() {
     if (selectedFile.value) {
       toast('正在上传附件…')
       const uploadRes = await api.uploadFile(selectedFile.value)
+      toast('上传成功，发送消息…')
       
-      if (uploadRes && uploadRes.urls && uploadRes.urls.length > 0) {
-        toast('上传成功，发送消息…')
+      // Share-center's /api/upload endpoint for post_id=0 returns {"filename": "msg_xxx.ext", "url": "/api/file/msg_xxx.ext", "type": "image"}
+      if (uploadRes && uploadRes.filename) {
+        payload.file_url = uploadRes.filename
+        payload.file_name = uploadRes.orig_name || selectedFile.value.name
+        payload.file_type = uploadRes.type || (selectedFile.value.type.startsWith('image/') ? 'image' : 'file')
+      } else if (uploadRes && uploadRes.urls && uploadRes.urls.length > 0) {
+        // Fallback for V5 list format if present
         payload.file_url = uploadRes.urls[0].url.replace('/api/file/', '')
-        payload.file_name = uploadRes.urls[0].name
-        payload.file_type = uploadRes.urls[0].type
+        payload.file_name = uploadRes.urls[0].name || selectedFile.value.name
+        payload.file_type = uploadRes.urls[0].type || 'file'
       } else if (uploadRes && uploadRes.url) { 
         payload.file_url = uploadRes.url.replace('/api/file/', '')
         payload.file_name = uploadRes.name || selectedFile.value.name

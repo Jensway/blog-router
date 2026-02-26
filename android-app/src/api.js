@@ -121,7 +121,7 @@ export const api = {
 
     return new Promise((resolve, reject) => {
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', file, file.name || 'shared_file.bin')
 
       const xhr = new XMLHttpRequest()
       xhr.open('POST', url, true)
