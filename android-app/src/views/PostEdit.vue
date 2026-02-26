@@ -86,6 +86,7 @@ const editorConfig = {
   width: '100%',
   language: 'zh_CN',
   placeholder: '在这里写下你的日志正文...',
+  init_instance_callback: function (editor) {
     const doc = editor.getDoc()
     if (!doc) return
     
