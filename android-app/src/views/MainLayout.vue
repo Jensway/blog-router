@@ -98,17 +98,16 @@ function exitApp() {
   justify-content: space-between;
 }
 .brand-logo {
-  display: flex;
-  align-items: center;
+  display: block;
+  flex-grow: 1; /* allow it to take up middle space */
+  margin-right: 16px;
 }
 .brand-img {
-  height: 44px;
+  max-height: 44px; /* Stop it from blowing up vertically */
   width: auto;
-  max-width: 65vw;
-  min-width: 140px;
+  max-width: 260px; /* Safe bounds for wide rectangular logos */
   object-fit: contain;
   object-position: left center;
-  flex-shrink: 0;
   display: block;
 }
 

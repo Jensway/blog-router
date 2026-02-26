@@ -217,25 +217,20 @@ async function load() {
       
       if (shared.url) {
         try {
-          // Capacitor returns local URI (file://... or content://...) from Share.
-          // Capacitor returns `content://` or `file://` URIs natively in Android.
-          // Due to Android 11+ Scoped Storage, `Filesystem.readFile` and raw `fetch()` on `content://` are blocked.
-          // Solution: Use `Capacitor.convertFileSrc` to bridge the URI through the local WebView server, THEN fetch it natively.
-          const safeUrl = window.Capacitor ? window.Capacitor.convertFileSrc(shared.url) : shared.url;
+          // For Android 11+, the most reliable method for an external `content://` URI is `Filesystem.readFile`
+          // which utilizes native Android Java privileges to read the InputStream into a base64 string.
+          const { Filesystem } = require('@capacitor/filesystem');
+          const contents = await Filesystem.readFile({ path: shared.url })
           
-          const res = await fetch(safeUrl)
-          let blob = await res.blob()
+          // Fast robust Base64 to Blob helper
+          const base64Data = contents.data;
           
           let ext = shared.url.split('.').pop().toLowerCase()
           if (!ext || ext === shared.url.toLowerCase() || ext.length > 5) {
-            if (blob.type.includes('image')) ext = 'jpg'
-            else if (blob.type.includes('video')) ext = 'mp4'
-            else if (blob.type.includes('pdf')) ext = 'pdf'
-            else if (blob.type.includes('audio')) ext = 'mp3'
-            else ext = 'bin'
+            ext = 'bin' // generic fallback
           }
           
-          let mimeType = blob.type || 'application/octet-stream'
+          let mimeType = 'application/octet-stream'
           if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
           else if (ext === 'zip') mimeType = 'application/zip'
           else if (ext === 'pdf') mimeType = 'application/pdf'
@@ -243,7 +238,10 @@ async function load() {
           else if (ext === 'png') mimeType = 'image/png'
           else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
           
-          blob = new Blob([blob], { type: mimeType })
+          // Offload massive Base64 decoding gracefully to WebView's native C++ `fetch` engine
+          // This avoids `atob` JavaScript heap crashes on large files (e.g. 50MB APKs/Videos)!
+          const fetchRes = await fetch(`data:${mimeType};base64,${base64Data}`);
+          const blob = await fetchRes.blob();
           
           let filename = shared.url.split('/').pop() || `shared_file.${ext}`
           // Fallback missing extensions on the filename just in case
@@ -255,8 +253,8 @@ async function load() {
           previewUrl.value = URL.createObjectURL(file)
           if (shared.text) newContent.value = shared.text
         } catch (e) {
-          console.error("Failed to read shared file:", e)
-          toast('无法读取分享的文件')
+          console.error("Failed to read shared file intent:", e)
+          toast('文件读取失败，可能是系统权限限制')
         }
       }
     }
