@@ -238,7 +238,7 @@ async function load() {
         try {
           // For Android 11+, the most reliable method for an external `content://` URI is `Filesystem.readFile`
           // which utilizes native Android Java privileges to read the InputStream into a base64 string.
-          const { Filesystem } = require('@capacitor/filesystem');
+          const { Filesystem } = await import('@capacitor/filesystem');
           const contents = await Filesystem.readFile({ path: shared.url })
           
           // Fast robust Base64 to Blob helper

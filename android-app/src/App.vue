@@ -54,6 +54,28 @@ onMounted(() => {
 
   // Also check on boot in case the app was launched directly from Share
   checkIntent()
+
+  // Hardware Back Button (Swipe-to-Go-Back) listener for Android
+  let backPressTime = 0
+  CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+    const topLevelPaths = ['/', '/posts', '/messages', '/settings', '/login']
+    const currentPath = router.currentRoute.value.path
+    const isTopLevel = topLevelPaths.includes(currentPath)
+    
+    if (!isTopLevel && canGoBack) {
+      // Ordinary subpage, navigate back normally
+      router.back()
+    } else {
+      // Root tab, require double press to exit
+      const now = new Date().getTime()
+      if (now - backPressTime < 2000) {
+        CapacitorApp.exitApp()
+      } else {
+        backPressTime = now
+        showToast('再按一次退出程序')
+      }
+    }
+  })
 })
 
 async function checkIntent() {
