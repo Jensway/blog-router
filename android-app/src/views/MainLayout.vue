@@ -88,27 +88,26 @@ function exitApp() {
   background: rgba(248, 250, 252, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: calc(16px + env(safe-area-inset-top)) 20px 12px;
+  padding: calc(16px + env(safe-area-inset-top)) 0 12px;
 }
 
 .app-brand {
   padding-top: 4px;
+  position: relative; /* Allows exit button to float absolutely over it */
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 .brand-logo {
   display: block;
-  flex: 1; /* Intelligently fill remaining space */
-  max-width: 320px; /* absolute limit to avoid crazy stretching on tablets */
-  margin-right: 16px;
+  width: 100%; /* Take 100% of the screen width */
 }
 .brand-img {
-  width: 100%; /* Stretch horizontally to fill the parent wrapper completely */
-  height: auto; /* Preserve natural aspect ratio based on absolute width */
-  max-height: 48px; /* Slightly taller limit for bold look */
+  width: 100%; /* Stretch horizontally to fill viewport */
+  height: auto; 
+  max-height: 48px; 
   object-fit: contain;
-  object-position: left center;
+  object-position: center center; /* Center the logo beautifully when fully stretched */
   display: block;
 }
 
@@ -147,7 +146,13 @@ function exitApp() {
 }
 
 .header-exit-btn {
-  background: transparent;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(255,255,255,0.85); /* Frosty background to float legibly */
+  backdrop-filter: blur(4px);
   border: none;
   cursor: pointer;
   display: flex;
@@ -156,13 +161,12 @@ function exitApp() {
   padding: 6px;
   border-radius: 50%;
   color: #64748b;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
   transition: all 0.2s;
-  background: #f8fafc;
-  outline: 1px solid #e2e8f0;
+  outline: 1px solid rgba(226, 232, 240, 0.5);
 }
 .header-exit-btn:active {
-  transform: scale(0.9);
+  transform: translateY(-50%) scale(0.9);
   background: #f1f5f9;
 }
-
 </style>
