@@ -99,13 +99,14 @@ function exitApp() {
 }
 .brand-logo {
   display: block;
-  flex-grow: 1; /* allow it to take up middle space */
+  flex: 1; /* Intelligently fill remaining space */
+  max-width: 320px; /* absolute limit to avoid crazy stretching on tablets */
   margin-right: 16px;
 }
 .brand-img {
-  max-height: 44px; /* Stop it from blowing up vertically */
-  width: auto;
-  max-width: 260px; /* Safe bounds for wide rectangular logos */
+  width: 100%; /* Stretch horizontally to fill the parent wrapper completely */
+  height: auto; /* Preserve natural aspect ratio based on absolute width */
+  max-height: 48px; /* Slightly taller limit for bold look */
   object-fit: contain;
   object-position: left center;
   display: block;
