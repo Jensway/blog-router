@@ -73,16 +73,7 @@
         <div class="send-bar">
           <input type="file" ref="fileInput" style="display: none" @change="onFileSelected" />
           
-          <button class="attach-btn" @click="$refs.fileInput.click()" title="发送图片/文件" :disabled="sending">
-            <span class="attach-icon">📎</span>
-            <span v-if="selectedFile" class="file-badge">1</span>
-          </button>
-          
-          <button class="paste-btn" @click="pasteFromClipboard" title="一键粘贴" :disabled="sending">
-             📋
-          </button>
-          
-          <div class="input-group">
+          <div class="ai-input-container">
             <textarea 
               ref="textInput"
               v-model="newContent" 
@@ -95,10 +86,23 @@
               rows="1"
             ></textarea>
             
-            <button class="send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
-              <span v-if="sending" class="spinner-small"></span>
-              <span v-else>发送</span>
-            </button>
+            <div class="ai-action-bar">
+              <div class="ai-tools-left">
+                <button class="icon-action-btn" @click="$refs.fileInput.click()" title="发送图片/文件" :disabled="sending">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  <span v-if="selectedFile" class="file-badge">1</span>
+                </button>
+                
+                <button class="icon-action-btn" @click="pasteFromClipboard" title="一键粘贴" :disabled="sending">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                </button>
+              </div>
+              
+              <button class="ai-send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
+                <span v-if="sending" class="spinner-small"></span>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -599,44 +603,27 @@ onActivated(load)
   align-items: center;
 }
 
-.attach-btn, .paste-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  border: none;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  color: var(--gray);
-  flex-shrink: 0;
-  transition: all 0.2s;
-  position: relative; /* CRITICAL: Allows .file-badge to anchor here */
-}
-.attach-btn:hover, .paste-btn:hover {
-  background: #e2e8f0;
-  color: var(--primary);
-}
-.attach-btn:active, .paste-btn:active {
-  transform: scale(0.95);
-}
-
-.input-group {
+.ai-input-container {
   flex: 1;
   display: flex;
-  align-items: center;
-  background: #f1f5f9;
-  border-radius: 22px;
-  overflow: hidden; /* Ensure square corners inside look round */
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ai-input-container:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .chat-input-area {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   min-height: 44px;
-  padding: 12px 16px;
+  padding: 12px 14px 4px 14px;
   border: none;
   background: transparent;
   font-size: 15px;
@@ -645,35 +632,73 @@ onActivated(load)
   resize: none;
   font-family: inherit;
   box-sizing: border-box;
-  overflow-y: hidden; /* Hide scrollbar until max height */
-}
-.chat-input-area:focus {
-  outline: none;
-  background: #fff;
-  /* Instead of an inset shadow that clips corners, let the parent handle the border, 
-     or just let the white background define the focus state elegantly */
+  overflow-y: hidden;
 }
 
-.send-btn {
-  flex-shrink: 0; /* Never shrink! */
-  height: 44px;
-  padding: 0 20px;
-  background: var(--primary);
-  color: var(--white);
+.chat-input-area:focus {
+  outline: none;
+}
+
+.ai-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 8px 8px;
+}
+
+.ai-tools-left {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   border: none;
-  font-weight: 600;
-  font-size: 15px;
-  white-space: nowrap; /* Prevent vertical wrapping */
-  cursor: pointer;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative; /* For file-badge */
 }
-.send-btn:disabled {
+
+.icon-action-btn:hover {
+  background: #f1f5f9;
+  color: var(--primary);
+}
+
+.icon-action-btn:active {
+  transform: scale(0.95);
+}
+
+.ai-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ai-send-btn:disabled {
   background: #cbd5e1;
-  color: #fff;
+  color: #f8fafc;
   cursor: not-allowed;
 }
+
+.ai-send-btn:not(:disabled):active {
+  transform: scale(0.95);
+}
+
 .spinner-small {
   width: 16px;
   height: 16px;
@@ -681,5 +706,23 @@ onActivated(load)
   border-radius: 50%;
   border-top-color: white;
   animation: spin 0.8s linear infinite;
+}
+
+/* Override existing file-badge positioning to fit the new SVG icon */
+.file-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--danger);
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  height: 16px;
+  width: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
 }
 </style>

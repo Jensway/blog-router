@@ -3,7 +3,7 @@
     <!-- Universal Brand Header -->
     <header class="app-brand blur-header">
       <div class="brand-logo">
-        <img src="/Logo3.png" class="brand-img" alt="logo" />
+        <img src="/Logo4.png" class="brand-img" alt="logo" />
       </div>
       <button class="header-exit-btn" @click="exitApp" title="退出">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
@@ -104,10 +104,10 @@ function exitApp() {
 }
 .brand-img {
   width: 100%; /* Stretch horizontally to fill viewport */
-  height: auto; 
-  max-height: 48px; 
-  object-fit: contain;
-  object-position: center center; /* Center the logo beautifully when fully stretched */
+  height: 100%; /* Cover the entire height */
+  max-height: 48px; /* Tightly lock height */
+  object-fit: fill; /* Deliberately stretch and deform image horizontally so it spans edge-to-edge without cropping top/bottom */
+  object-position: center center;
   display: block;
 }
 
