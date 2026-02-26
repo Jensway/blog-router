@@ -217,38 +217,33 @@ async function load() {
       
       if (shared.url) {
         try {
-          toast('正在解析分享的文件...')
-          // Capacitor returns local URI (file://...) from Share. Read it into base64.
-          const contents = await Filesystem.readFile({ path: shared.url })
+          // Capacitor returns local URI (file://... or content://...) from Share.
+          // Capacitor returns `content://` or `file://` URIs natively in Android.
+          // Due to Android 11+ Scoped Storage, `Filesystem.readFile` and raw `fetch()` on `content://` are blocked.
+          // Solution: Use `Capacitor.convertFileSrc` to bridge the URI through the local WebView server, THEN fetch it natively.
+          const safeUrl = window.Capacitor ? window.Capacitor.convertFileSrc(shared.url) : shared.url;
           
-          // Convert base64 to Blob
-          const byteCharacters = atob(contents.data)
-          const byteArrays = []
-          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512)
-            const byteNumbers = new Array(slice.length)
-            for (let i = 0; i < slice.length; i++) {
-              byteNumbers[i] = slice.charCodeAt(i)
-            }
-            const byteArray = new Uint8Array(byteNumbers)
-            byteArrays.push(byteArray)
-          }
+          const res = await fetch(safeUrl)
+          let blob = await res.blob()
           
           let ext = shared.url.split('.').pop().toLowerCase()
-          if (!ext || ext === shared.url.toLowerCase()) ext = 'bin'
+          if (!ext || ext === shared.url.toLowerCase() || ext.length > 5) {
+            if (blob.type.includes('image')) ext = 'jpg'
+            else if (blob.type.includes('video')) ext = 'mp4'
+            else if (blob.type.includes('pdf')) ext = 'pdf'
+            else if (blob.type.includes('audio')) ext = 'mp3'
+            else ext = 'bin'
+          }
           
-          let mimeType = 'application/octet-stream'
-          if (ext === 'png') mimeType = 'image/png'
-          else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
-          else if (ext === 'gif') mimeType = 'image/gif'
-          else if (ext === 'pdf') mimeType = 'application/pdf'
-          else if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
+          let mimeType = blob.type || 'application/octet-stream'
+          if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
           else if (ext === 'zip') mimeType = 'application/zip'
+          else if (ext === 'pdf') mimeType = 'application/pdf'
           else if (ext === 'mp4') mimeType = 'video/mp4'
-          else if (ext === 'mp3') mimeType = 'audio/mpeg'
-          else if (ext === 'txt') mimeType = 'text/plain'
-
-          const blob = new Blob(byteArrays, { type: mimeType })
+          else if (ext === 'png') mimeType = 'image/png'
+          else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+          
+          blob = new Blob([blob], { type: mimeType })
           
           let filename = shared.url.split('/').pop() || `shared_file.${ext}`
           // Fallback missing extensions on the filename just in case

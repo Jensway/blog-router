@@ -114,10 +114,10 @@ onMounted(async () => {
           // 清洗可能存在的过期 Token 或干扰参数，基于原生 fileURL 重塑无缓存的新地址
           let name = curSrc.split('/').pop().split('?')[0];
           name = decodeURIComponent(name);
-          const freshUrl = fileURL('/api/file/' + encodeURIComponent(name));
+          const freshUrl = fileURL('/api/file/' + encodeURIComponent(name)) + '?v=' + Date.now();
           
           // 原生拉取数据为 Blob，100% 躲开 Android WebView 的后缀名和 octet-stream 安全机制拦截
-          // 利用默认缓存机制，避免每次重载
+          // 利用 freshUrl 上的时间戳参数绝对穿透缓存机制，保证读取最新图片
           const res = await fetch(freshUrl);
           if (res.ok) {
             const blob = await res.blob();
