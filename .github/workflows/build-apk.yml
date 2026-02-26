@@ -35,7 +35,7 @@ jobs:
       - name: 生成并应用应用图标
         working-directory: android-app
         run: |
-          npm install @capacitor/assets --save-dev
+          npm install @capacitor/assets@3.0.5 sharp@0.32.6 --save-dev --legacy-peer-deps
           mkdir -p assets
           cp "public/app icon 4.png" assets/icon-only.png
           cp "public/app icon 4.png" assets/icon-foreground.png

@@ -83,14 +83,17 @@
           </button>
           
           <div class="input-group">
-            <input 
+            <textarea 
+              ref="textInput"
               v-model="newContent" 
-              class="chat-input"
+              class="chat-input-area"
               placeholder="说点什么…" 
-              maxlength="500" 
-              @keyup.enter="send" 
+              maxlength="1000" 
+              @input="autoResize"
+              @keydown.enter.prevent="handleEnter"
               :disabled="sending"
-            />
+              rows="1"
+            ></textarea>
             
             <button class="send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
               <span v-if="sending" class="spinner-small"></span>
@@ -119,9 +122,21 @@ const error = ref('')
 const newContent = ref('')
 const sending = ref(false)
 
+const textInput = ref(null)
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const previewUrl = ref('')
+
+function autoResize() {
+  if (!textInput.value) return;
+  textInput.value.style.height = 'auto'; // Reset
+  textInput.value.style.height = Math.min(textInput.value.scrollHeight, 120) + 'px'; // Cap at ~5 lines
+}
+
+function handleEnter(e) {
+  if (e.shiftKey) return; // Allow Shift+Enter for newlines
+  send();
+}
 
 function isImage(file) {
   return file && file.type.startsWith('image/')
@@ -617,21 +632,26 @@ onActivated(load)
   overflow: hidden; /* Ensure square corners inside look round */
 }
 
-/* Redesigned Input and Send Button joined */
-.chat-input {
+.chat-input-area {
   flex: 1;
-  min-width: 0; /* Prevents input from pushing flex items vertically */
-  height: 44px;
-  padding: 0 16px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
   border: none;
   background: transparent;
   font-size: 15px;
   color: var(--dark);
+  line-height: 1.4;
+  resize: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  overflow-y: hidden; /* Hide scrollbar until max height */
 }
-.chat-input:focus {
+.chat-input-area:focus {
   outline: none;
   background: #fff;
-  box-shadow: inset 0 0 0 2px var(--primary-light);
+  /* Instead of an inset shadow that clips corners, let the parent handle the border, 
+     or just let the white background define the focus state elegantly */
 }
 
 .send-btn {
