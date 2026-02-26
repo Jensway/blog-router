@@ -234,10 +234,26 @@ async function load() {
             byteArrays.push(byteArray)
           }
           
-          const mimeType = shared.url.endsWith('.png') ? 'image/png' : 'image/jpeg'
+          let ext = shared.url.split('.').pop().toLowerCase()
+          if (!ext || ext === shared.url.toLowerCase()) ext = 'bin'
+          
+          let mimeType = 'application/octet-stream'
+          if (ext === 'png') mimeType = 'image/png'
+          else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+          else if (ext === 'gif') mimeType = 'image/gif'
+          else if (ext === 'pdf') mimeType = 'application/pdf'
+          else if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
+          else if (ext === 'zip') mimeType = 'application/zip'
+          else if (ext === 'mp4') mimeType = 'video/mp4'
+          else if (ext === 'mp3') mimeType = 'audio/mpeg'
+          else if (ext === 'txt') mimeType = 'text/plain'
+
           const blob = new Blob(byteArrays, { type: mimeType })
           
-          const filename = shared.url.split('/').pop() || 'shared_image.jpg'
+          let filename = shared.url.split('/').pop() || `shared_file.${ext}`
+          // Fallback missing extensions on the filename just in case
+          if (!filename.includes('.')) filename += `.${ext}`
+          
           const file = new File([blob], filename, { type: mimeType })
           
           selectedFile.value = file
