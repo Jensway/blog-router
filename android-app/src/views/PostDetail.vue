@@ -88,22 +88,6 @@ function rewriteImageSrcs(html) {
   }
 }
 
-/**
- * 对所有图片做 Blob 转换兜底
- * 解决 Android WebView 拒绝渲染 application/octet-stream 的问题
- */
-async function blobifyImage(img) {
-  const originalSrc = img.getAttribute('src')
-  if (!originalSrc || originalSrc.startsWith('blob:') || originalSrc.startsWith('data:')) return
-  try {
-    // img.src forces browser to yield fully URI-encoded absolute path 
-    const res = await fetch(img.src)
-    if (res.ok) {
-      const blob = await res.blob()
-      img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
-    }
-  } catch (_) { /* 静默失败 */ }
-}
 
 onMounted(async () => {
   const id = route.params.id
@@ -116,28 +100,10 @@ onMounted(async () => {
     const raw = post.value.safe_content || post.value.content || ''
     post.value.safe_content = rewriteImageSrcs(raw)
 
-    // Phase 2: DOM 渲染完成后，给每张图加 onerror 兜底
+    // Phase 2: DOM 渲染完成后，高亮代码块，移除原来的强制 blob 兜底
     await nextTick()
     setTimeout(() => {
       if (window.Prism) window.Prism.highlightAll()
-      const images = document.querySelectorAll('.content img')
-      images.forEach((img) => {
-        // 对所有远程图以 blob 方式重新加载，彻底绕过 WebView MIME 拦截
-        blobifyImage(img)
-        img.onerror = function () {
-          const curSrc = this.src || this.getAttribute('src') || ''
-          if (!curSrc || curSrc.startsWith('blob:')) return
-          this.onerror = null // 防止死循环
-          const base = getBaseURL()
-          if (base) {
-            let name = curSrc.split('/').pop()
-            name = name.split('?')[0] // remove corrupted query strings
-            name = decodeURIComponent(name) // decode %20 back to spaces
-            // Re-encode freshly via fileURL
-            this.src = fileURL('/api/file/' + encodeURIComponent(name))
-          }
-        }
-      })
     }, 200)
   } catch (e) {
     error.value = e.message
