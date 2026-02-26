@@ -591,6 +591,30 @@ onActivated(load)
   align-items: center;
 }
 
+.attach-btn, .paste-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  border: none;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray);
+  flex-shrink: 0;
+  transition: all 0.2s;
+  position: relative; /* CRITICAL: Allows .file-badge to anchor here */
+}
+.attach-btn:hover, .paste-btn:hover {
+  background: #e2e8f0;
+  color: var(--primary);
+}
+.attach-btn:active, .paste-btn:active {
+  transform: scale(0.95);
+}
+
 .input-group {
   flex: 1;
   display: flex;

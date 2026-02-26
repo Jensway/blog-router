@@ -102,9 +102,10 @@ function exitApp() {
   align-items: center;
 }
 .brand-img {
-  height: 48px;
-  max-width: 65vw;
+  height: 44px;
   width: auto;
+  max-width: 65vw;
+  min-width: 140px;
   object-fit: contain;
   object-position: left center;
   flex-shrink: 0;

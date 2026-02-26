@@ -86,9 +86,29 @@ const editorConfig = {
   width: '100%',
   language: 'zh_CN',
   placeholder: '在这里写下你的日志正文...',
-  init_instance_callback: function (editor) {
     const doc = editor.getDoc()
     if (!doc) return
+    
+    // 拦截所有远程图片，强制使用 Blob 重载，绕开 WebView 的 MIME/nosniff 安全审查
+    const images = doc.querySelectorAll('img')
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]
+      const curSrc = img.getAttribute('src')
+      if (!curSrc || curSrc.startsWith('blob:') || curSrc.startsWith('data:')) continue
+      
+      try {
+        let name = curSrc.split('/').pop().split('?')[0];
+        name = decodeURIComponent(name);
+        const freshUrl = fileURL('/api/file/' + encodeURIComponent(name));
+        
+        fetch(freshUrl).then(res => {
+          if (res.ok) return res.blob()
+          throw new Error('Not OK')
+        }).then(blob => {
+          img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
+        }).catch(() => {})
+      } catch (e) {}
+    }
   },
   images_upload_handler: async (blobInfo) => {
     try {

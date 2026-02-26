@@ -100,10 +100,33 @@ onMounted(async () => {
     const raw = post.value.safe_content || post.value.content || ''
     post.value.safe_content = rewriteImageSrcs(raw)
 
-    // Phase 2: DOM 渲染完成后，高亮代码块，移除原来的强制 blob 兜底
+    // Phase 2: DOM 渲染完成后，高亮代码块，并执行原生 Blob 转换（彻底绕过不同 WebView 的拦截机制）
     await nextTick()
     setTimeout(() => {
       if (window.Prism) window.Prism.highlightAll()
+      
+      const images = document.querySelectorAll('.content img')
+      images.forEach(async (img) => {
+        const curSrc = img.getAttribute('src');
+        if (!curSrc || curSrc.startsWith('blob:') || curSrc.startsWith('data:')) return;
+        
+        try {
+          // 清洗可能存在的过期 Token 或干扰参数，基于原生 fileURL 重塑无缓存的新地址
+          let name = curSrc.split('/').pop().split('?')[0];
+          name = decodeURIComponent(name);
+          const freshUrl = fileURL('/api/file/' + encodeURIComponent(name));
+          
+          // 原生拉取数据为 Blob，100% 躲开 Android WebView 的后缀名和 octet-stream 安全机制拦截
+          // 利用默认缓存机制，避免每次重载
+          const res = await fetch(freshUrl);
+          if (res.ok) {
+            const blob = await res.blob();
+            img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }));
+          }
+        } catch (e) {
+          console.error("DOM Img intercept failed", e);
+        }
+      })
     }, 200)
   } catch (e) {
     error.value = e.message
