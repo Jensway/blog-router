@@ -210,6 +210,9 @@ function removeFile() {
     URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = ''
   }
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 
 onUnmounted(() => {
@@ -344,8 +347,16 @@ async function send() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('reloadMessagesIntent', load)
+})
+
 onActivated(load)
+
+onUnmounted(() => {
+  window.removeEventListener('reloadMessagesIntent', load)
+})
 </script>
 
 <style scoped>

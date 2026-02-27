@@ -61,14 +61,22 @@ onMounted(() => {
         showToast('获取到应用外文件分享')
         const sharedData = { text: '', url: data.url, title: 'Share Intent' }
         localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
-        router.push('/messages')
+        if (router.currentRoute.value.path === '/messages') {
+          window.dispatchEvent(new CustomEvent('reloadMessagesIntent'))
+        } else {
+          router.push('/messages')
+        }
         // Automatically check if there's more in the queue instantly
         setTimeout(checkNativeShareQueue, 100);
       } else if (data && data.text) {
         showToast('获取到外部文本分享')
         const sharedData = { text: data.text, url: '', title: 'Share Intent Text' }
         localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
-        router.push('/messages')
+        if (router.currentRoute.value.path === '/messages') {
+          window.dispatchEvent(new CustomEvent('reloadMessagesIntent'))
+        } else {
+          router.push('/messages')
+        }
         setTimeout(checkNativeShareQueue, 100);
       }
     } catch (e) {

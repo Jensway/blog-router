@@ -1520,18 +1520,25 @@ func (app *App) handleDeleteAttachment(w http.ResponseWriter, r *http.Request) {
 func (app *App) handleFile(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimPrefix(r.URL.Path, "/api/file/")
 	filename = strings.TrimSpace(filename)
-	if filename == "" || strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+
+	// Support Mobile URL pseudo-paths (e.g. /api/file/{hash}/实际名字.jpg)
+	// This tricks dumb Android download managers into natively grabbing the final string
+	parts := strings.Split(filename, "/")
+	actualHashName := parts[0]
+
+	if actualHashName == "" || strings.Contains(actualHashName, "..") || strings.Contains(actualHashName, "\\") {
 		http.NotFound(w, r)
 		return
 	}
 
-	filePath := filepath.Join(app.workDir, "uploads", filename)
+	filePath := filepath.Join(app.workDir, "uploads", actualHashName)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
+	// For content-type, we should use the actual hash's extension, or the spoofed extension
+	ext := strings.ToLower(filepath.Ext(actualHashName))
 	mtype := mime.TypeByExtension(ext)
 	if mtype == "" {
 		mtype = "application/octet-stream"
