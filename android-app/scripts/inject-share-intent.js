@@ -79,7 +79,7 @@ if (fs.existsSync(mainActivityPath)) {
                 @Override
                 public void run() {
                     if (bridge != null && bridge.getWebView() != null) {
-                        String script = "window.dispatchEvent(new CustomEvent('nativeShareIntentText', { detail: { text: '" + safeText + "' } }));";
+                        String script = "window._preloadedShareText = { text: '" + safeText + "' }; window.dispatchEvent(new CustomEvent('nativeShareIntentText', { detail: window._preloadedShareText }));";
                         bridge.getWebView().evaluateJavascript(script, null);
                     }
                 }
@@ -153,7 +153,7 @@ if (fs.existsSync(mainActivityPath)) {
                                     @Override
                                     public void run() {
                                         if (bridge != null && bridge.getWebView() != null) {
-                                            String script = "window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: { url: '" + safeUri + "' } }));";
+                                            String script = "window._preloadedShareIntent = { url: '" + safeUri + "' }; window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: window._preloadedShareIntent }));";
                                             bridge.getWebView().evaluateJavascript(script, null);
                                         }
                                     }

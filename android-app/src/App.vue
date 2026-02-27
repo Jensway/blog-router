@@ -84,6 +84,20 @@ onMounted(() => {
 
   // Also check on boot in case the app was launched directly from Share
   checkIntent()
+  
+  // Consume any Share Intents that arrived and were cached by Java before Vue mounted
+  setTimeout(() => {
+    if (window._preloadedShareIntent) {
+      const payload = window._preloadedShareIntent;
+      window._preloadedShareIntent = null;
+      window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: payload }));
+    }
+    if (window._preloadedShareText) {
+      const payload = window._preloadedShareText;
+      window._preloadedShareText = null;
+      window.dispatchEvent(new CustomEvent('nativeShareIntentText', { detail: payload }));
+    }
+  }, 100);
 
   // Hardware Back Button (Swipe-to-Go-Back) listener for Android
   let backPressTime = 0
