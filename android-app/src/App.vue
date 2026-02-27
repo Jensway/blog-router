@@ -81,6 +81,14 @@ onMounted(() => {
     checkNativeShareQueue()
   })
 
+  // CRITICAL: WebViews drop evaluateJavascript when backgrounded!
+  // Entering the Share Menu pushes the app to the background, and returning triggers appStateChange.
+  CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) {
+      checkNativeShareQueue()
+    }
+  })
+
   // Also check exactly once the root Vue app successfully mounts (Replaces legacy _preloaded logic)
   checkNativeShareQueue()
 

@@ -16,6 +16,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1254,11 +1255,11 @@ func (app *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 			os.Remove(savePath)
 		}
 		jsonResponse(w, map[string]interface{}{
-			"filename":   msgSafeName,
-			"orig_name":  filename,
-			"file_type":  fileType,
-			"file_size":  written,
-			"url":        "/api/file/" + msgSafeName,
+			"filename":  msgSafeName,
+			"orig_name": filename,
+			"file_type": fileType,
+			"file_size": written,
+			"url":       "/api/file/" + msgSafeName,
 		})
 		return
 	}
@@ -1438,11 +1439,11 @@ func (app *App) handleUploadMerge(w http.ResponseWriter, r *http.Request) {
 	if postID == 0 {
 		// 消息广场：只合并文件并返回，不创建日志条目，由前端再 POST /api/messages 写入 messages 表
 		jsonResponse(w, map[string]interface{}{
-			"filename":   safeName,
-			"orig_name":  req.Filename,
-			"file_type":  fileType,
-			"file_size":  totalSize,
-			"url":        "/api/file/" + safeName,
+			"filename":  safeName,
+			"orig_name": req.Filename,
+			"file_type": fileType,
+			"file_size": totalSize,
+			"url":       "/api/file/" + safeName,
 		})
 		return
 	}
@@ -1538,6 +1539,14 @@ func (app *App) handleFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", mtype)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	downloadName := r.URL.Query().Get("download")
+	if downloadName != "" {
+		// RFC 5987 compliant UTF-8 filename encoding for mobile browsers
+		encodedName := url.QueryEscape(downloadName)
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, downloadName, encodedName))
+	}
+
 	http.ServeFile(w, r, filePath)
 }
 
