@@ -20,8 +20,9 @@ import { reactive, provide, onMounted } from 'vue'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useRouter } from 'vue-router'
 import { api } from './api'
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 
+const NativeShareProxy = registerPlugin('NativeShareProxy')
 const toast = reactive({ show: false, text: '' })
 const router = useRouter()
 let timer = null
@@ -52,52 +53,36 @@ onMounted(() => {
     checkIntent()
   })
 
-  // Listen for Native Java Injected Android 13+ Scoped Storage Intents
-  window.addEventListener('nativeShareIntent', (e) => {
-    if (e.detail && e.detail.url) {
-      showToast('获取到相册分享附件')
-      
-      const sharedData = {
-        text: '',
-        url: e.detail.url,
-        title: 'Share Intent'
+  // Setup the NativeShareProxy Queue Drainer
+  const checkNativeShareQueue = async () => {
+    try {
+      const data = await NativeShareProxy.getPendingIntents()
+      if (data && data.url) {
+        showToast('获取到应用外文件分享')
+        const sharedData = { text: '', url: data.url, title: 'Share Intent' }
+        localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
+        router.push('/messages')
+        // Automatically check if there's more in the queue instantly
+        setTimeout(checkNativeShareQueue, 100);
+      } else if (data && data.text) {
+        showToast('获取到外部文本分享')
+        const sharedData = { text: data.text, url: '', title: 'Share Intent Text' }
+        localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
+        router.push('/messages')
+        setTimeout(checkNativeShareQueue, 100);
       }
-      localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
-      router.push('/messages')
+    } catch (e) {
+      // Silently ignore if executing on standard Web Browsers where plugin doesn't exist
     }
+  }
+
+  // Listen for Native Java structural Pings that signal new intents arrived
+  window.addEventListener('nativeShareIntentPing', () => {
+    checkNativeShareQueue()
   })
 
-  // Listen for Native Java Injected Text/URL Sharing (Edge Browser, etc.)
-  window.addEventListener('nativeShareIntentText', (e) => {
-    if (e.detail && e.detail.text) {
-      showToast('获取到外部文本分享')
-      
-      const sharedData = {
-        text: e.detail.text,
-        url: '',
-        title: 'Share Intent Text'
-      }
-      localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
-      router.push('/messages')
-    }
-  })
-
-  // Also check on boot in case the app was launched directly from Share
-  checkIntent()
-  
-  // Consume any Share Intents that arrived and were cached by Java before Vue mounted
-  setTimeout(() => {
-    if (window._preloadedShareIntent) {
-      const payload = window._preloadedShareIntent;
-      window._preloadedShareIntent = null;
-      window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: payload }));
-    }
-    if (window._preloadedShareText) {
-      const payload = window._preloadedShareText;
-      window._preloadedShareText = null;
-      window.dispatchEvent(new CustomEvent('nativeShareIntentText', { detail: payload }));
-    }
-  }, 100);
+  // Also check exactly once the root Vue app successfully mounts (Replaces legacy _preloaded logic)
+  checkNativeShareQueue()
 
   // Hardware Back Button (Swipe-to-Go-Back) listener for Android
   let backPressTime = 0

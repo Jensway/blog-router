@@ -51,6 +51,29 @@ if (fs.existsSync(mainActivityPath)) {
     let mainActivity = fs.readFileSync(mainActivityPath, 'utf8');
 
     const javaMethods = `
+    @com.getcapacitor.annotation.CapacitorPlugin(name = "NativeShareProxy")
+    public static class NativeShareProxy extends com.getcapacitor.Plugin {
+        public static final java.util.ArrayList<String> pendingIntents = new java.util.ArrayList<>();
+        public static final java.util.ArrayList<String> pendingIntentTexts = new java.util.ArrayList<>();
+
+        @com.getcapacitor.annotation.PluginMethod
+        public void getPendingIntents(com.getcapacitor.PluginCall call) {
+            com.getcapacitor.JSObject ret = new com.getcapacitor.JSObject();
+            if (!pendingIntents.isEmpty()) {
+                ret.put("url", pendingIntents.remove(0));
+            } else if (!pendingIntentTexts.isEmpty()) {
+                ret.put("text", pendingIntentTexts.remove(0));
+            }
+            call.resolve(ret);
+        }
+    }
+
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        registerPlugin(NativeShareProxy.class);
+        super.onCreate(savedInstanceState);
+    }
+
     @Override
     public void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
@@ -75,12 +98,12 @@ if (fs.existsSync(mainActivityPath)) {
         String sharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT);
         if (sharedText != null && !sharedText.isEmpty()) {
             final String safeText = sharedText.replace("'", "\\'").replace("\\n", "\\\\n");
+            NativeShareProxy.pendingIntentTexts.add(safeText);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     if (bridge != null && bridge.getWebView() != null) {
-                        String script = "window._preloadedShareText = { text: '" + safeText + "' }; window.dispatchEvent(new CustomEvent('nativeShareIntentText', { detail: window._preloadedShareText }));";
-                        bridge.getWebView().evaluateJavascript(script, null);
+                        bridge.getWebView().evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeShareIntentPing'));", null);
                     }
                 }
             });
@@ -148,13 +171,14 @@ if (fs.existsSync(mainActivityPath)) {
                                 
                                 final String safeUri = android.net.Uri.fromFile(tempFile).toString();
                                 
-                                // Fire Native JS Event into WebView securely!
+                                NativeShareProxy.pendingIntents.add(safeUri);
+                                
+                                // Fire structural Ping to WebView securely
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         if (bridge != null && bridge.getWebView() != null) {
-                                            String script = "window._preloadedShareIntent = { url: '" + safeUri + "' }; window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: window._preloadedShareIntent }));";
-                                            bridge.getWebView().evaluateJavascript(script, null);
+                                            bridge.getWebView().evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeShareIntentPing'));", null);
                                         }
                                     }
                                 });
@@ -178,7 +202,7 @@ if (fs.existsSync(mainActivityPath)) {
         if (lastBraceIndex !== -1) {
             mainActivity = mainActivity.slice(0, lastBraceIndex) + javaMethods + '\n}\n';
             fs.writeFileSync(mainActivityPath, mainActivity, 'utf8');
-            console.log('Successfully injected Native Cache Scoped Storage Bypass into MainActivity.java');
+            console.log('Successfully injected Native Cache Scoped Storage Bypass and NativeShareProxy Plugin into MainActivity.java');
         }
     } else {
         console.log('MainActivity.java already contains handleShareIntent.');
