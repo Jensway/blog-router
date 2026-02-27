@@ -98,68 +98,74 @@ if (fs.existsSync(mainActivityPath)) {
             if (list != null) uris.addAll(list);
         }
 
-        for (android.net.Uri uri : uris) {
-            if ("content".equals(uri.getScheme()) || "file".equals(uri.getScheme())) {
-                try {
-                    // Determine Extension
-                    String ext = "bin";
-                    String mimeType = getContentResolver().getType(uri);
-                    if (mimeType != null) {
-                        if (mimeType.contains("jpeg") || mimeType.contains("jpg")) ext = "jpg";
-                        else if (mimeType.contains("png")) ext = "png";
-                        else if (mimeType.contains("mp4")) ext = "mp4";
-                        else if (mimeType.contains("pdf")) ext = "pdf";
-                        else if (mimeType.contains("android.package-archive") || mimeType.contains("apk")) ext = "apk";
-                        else if (mimeType.contains("zip")) ext = "zip";
-                    }
-                    
-                    String displayName = "shared_" + System.currentTimeMillis() + "." + ext;
-                    
-                    if ("content".equals(uri.getScheme())) {
-                        try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null, null)) {
-                            if (cursor != null && cursor.moveToFirst()) {
-                                int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
-                                if (nameIndex >= 0) {
-                                    String name = cursor.getString(nameIndex);
-                                    if (name != null && name.contains(".")) displayName = name;
-                                }
+        // Offload extraction to a background thread to prevent Main UI Thread ANR timeouts for large files
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                for (android.net.Uri uri : uris) {
+                    if ("content".equals(uri.getScheme()) || "file".equals(uri.getScheme())) {
+                        try {
+                            // Determine Extension
+                            String ext = "bin";
+                            String mimeType = getContentResolver().getType(uri);
+                            if (mimeType != null) {
+                                if (mimeType.contains("jpeg") || mimeType.contains("jpg")) ext = "jpg";
+                                else if (mimeType.contains("png")) ext = "png";
+                                else if (mimeType.contains("mp4")) ext = "mp4";
+                                else if (mimeType.contains("pdf")) ext = "pdf";
+                                else if (mimeType.contains("android.package-archive") || mimeType.contains("apk")) ext = "apk";
+                                else if (mimeType.contains("zip")) ext = "zip";
                             }
-                        } catch (Exception ex) { }
-                    } else if ("file".equals(uri.getScheme())) {
-                        displayName = new java.io.File(uri.getPath()).getName();
-                    }
+                            
+                            String displayName = "shared_" + System.currentTimeMillis() + "." + ext;
+                            
+                            if ("content".equals(uri.getScheme())) {
+                                try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null, null)) {
+                                    if (cursor != null && cursor.moveToFirst()) {
+                                        int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                                        if (nameIndex >= 0) {
+                                            String name = cursor.getString(nameIndex);
+                                            if (name != null && name.contains(".")) displayName = name;
+                                        }
+                                    }
+                                } catch (Exception ex) { }
+                            } else if ("file".equals(uri.getScheme())) {
+                                displayName = new java.io.File(uri.getPath()).getName();
+                            }
 
-                    // Bypass Android 13 Scoped Storage by natively caching the stream securely
-                    java.io.InputStream inputStream = getContentResolver().openInputStream(uri);
-                    if (inputStream != null) {
-                        java.io.File tempFile = new java.io.File(getCacheDir(), displayName);
-                        java.io.FileOutputStream outputStream = new java.io.FileOutputStream(tempFile);
-                        byte[] buffer = new byte[8192];
-                        int bytesRead;
-                        while ((bytesRead = inputStream.read(buffer)) != -1) {
-                            outputStream.write(buffer, 0, bytesRead);
-                        }
-                        inputStream.close();
-                        outputStream.close();
-                        
-                        final String safeUri = android.net.Uri.fromFile(tempFile).toString();
-                        
-                        // Fire Native JS Event into WebView securely!
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (bridge != null && bridge.getWebView() != null) {
-                                    String script = "window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: { url: '" + safeUri + "' } }));";
-                                    bridge.getWebView().evaluateJavascript(script, null);
+                            // Bypass Android 13 Scoped Storage by natively caching the stream securely
+                            java.io.InputStream inputStream = getContentResolver().openInputStream(uri);
+                            if (inputStream != null) {
+                                java.io.File tempFile = new java.io.File(getCacheDir(), displayName);
+                                java.io.FileOutputStream outputStream = new java.io.FileOutputStream(tempFile);
+                                byte[] buffer = new byte[8192];
+                                int bytesRead;
+                                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                                    outputStream.write(buffer, 0, bytesRead);
                                 }
+                                inputStream.close();
+                                outputStream.close();
+                                
+                                final String safeUri = android.net.Uri.fromFile(tempFile).toString();
+                                
+                                // Fire Native JS Event into WebView securely!
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (bridge != null && bridge.getWebView() != null) {
+                                            String script = "window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: { url: '" + safeUri + "' } }));";
+                                            bridge.getWebView().evaluateJavascript(script, null);
+                                        }
+                                    }
+                                });
                             }
-                        });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
-        }
+        });
         
         // Consume intent so it doesn't fire again
         setIntent(new android.content.Intent());

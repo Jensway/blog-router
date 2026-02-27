@@ -245,18 +245,22 @@ async function load() {
             ext = 'bin' // generic fallback
           }
           
-          let mimeType = 'application/octet-stream'
-          if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
-          else if (ext === 'zip') mimeType = 'application/zip'
-          else if (ext === 'pdf') mimeType = 'application/pdf'
-          else if (ext === 'mp4') mimeType = 'video/mp4'
-          else if (ext === 'png') mimeType = 'image/png'
-          else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
-          
-          // Natively stream the binary data into WebView memory directly, avoiding Base64 JS bridge limits
+          // Natively stream the binary data into WebView memory directly
           const fetchRes = await fetch(convertedUrl);
           if (!fetchRes.ok) throw new Error("WebView local proxy denied the read stream");
           const blob = await fetchRes.blob();
+          
+          let mimeType = blob.type || 'application/octet-stream'
+          
+          // Fallback manual mime assignment if the proxy couldn't intuit it
+          if (mimeType === 'application/octet-stream' || mimeType === '') {
+            if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
+            else if (ext === 'zip') mimeType = 'application/zip'
+            else if (ext === 'pdf') mimeType = 'application/pdf'
+            else if (ext === 'mp4') mimeType = 'video/mp4'
+            else if (ext === 'png') mimeType = 'image/png'
+            else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+          }
           
           let filename = shared.url.split('/').pop() || `shared_file.${ext}`
           // Fallback missing extensions on the filename just in case
