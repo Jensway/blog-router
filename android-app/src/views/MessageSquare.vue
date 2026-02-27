@@ -116,7 +116,7 @@ import { useRouter } from 'vue-router'
 import { api, fileURL } from '../api'
 import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
-import { Filesystem } from '@capacitor/filesystem'
+import { Capacitor } from '@capacitor/core'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -236,13 +236,9 @@ async function load() {
       
       if (shared.url) {
         try {
-          // For Android 11+, the most reliable method for an external `content://` URI is `Filesystem.readFile`
-          // which utilizes native Android Java privileges to read the InputStream into a base64 string.
-          const { Filesystem } = await import('@capacitor/filesystem');
-          const contents = await Filesystem.readFile({ path: shared.url })
-          
-          // Fast robust Base64 to Blob helper
-          const base64Data = contents.data;
+          // Utilize Capacitor's native local server to bypass Android 11+ strict Scoped Storage blocks!
+          // This safely transforms 'content://' or 'file://' intents into 'http://localhost/_capacitor_file_/' streams.
+          const convertedUrl = Capacitor.convertFileSrc(shared.url);
           
           let ext = shared.url.split('.').pop().toLowerCase()
           if (!ext || ext === shared.url.toLowerCase() || ext.length > 5) {
@@ -257,9 +253,9 @@ async function load() {
           else if (ext === 'png') mimeType = 'image/png'
           else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
           
-          // Offload massive Base64 decoding gracefully to WebView's native C++ `fetch` engine
-          // This avoids `atob` JavaScript heap crashes on large files (e.g. 50MB APKs/Videos)!
-          const fetchRes = await fetch(`data:${mimeType};base64,${base64Data}`);
+          // Natively stream the binary data into WebView memory directly, avoiding Base64 JS bridge limits
+          const fetchRes = await fetch(convertedUrl);
+          if (!fetchRes.ok) throw new Error("WebView local proxy denied the read stream");
           const blob = await fetchRes.blob();
           
           let filename = shared.url.split('/').pop() || `shared_file.${ext}`
