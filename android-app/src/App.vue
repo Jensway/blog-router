@@ -47,9 +47,24 @@ onMounted(() => {
   })
 
   // Listen for natively bound Android SEND share intents
-  // This is triggered by Capacitor-share-extension
+  // This is triggered by Capacitor-share-extension (mostly for text/legacy)
   window.addEventListener('sendIntentReceived', () => {
     checkIntent()
+  })
+
+  // Listen for Native Java Injected Android 13+ Scoped Storage Intents
+  window.addEventListener('nativeShareIntent', (e) => {
+    if (e.detail && e.detail.url) {
+      showToast('获取到相册分享附件')
+      
+      const sharedData = {
+        text: '',
+        url: e.detail.url,
+        title: 'Share Intent'
+      }
+      localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
+      router.push('/messages')
+    }
   })
 
   // Also check on boot in case the app was launched directly from Share

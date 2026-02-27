@@ -47,23 +47,23 @@ const mainActivityPath = path.join(__dirname, '..', 'android', 'app', 'src', 'ma
 
 if (fs.existsSync(mainActivityPath)) {
     let mainActivity = fs.readFileSync(mainActivityPath, 'utf8');
-    
+
     const javaMethods = `
     @Override
     public void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
-        setIntent(fixShareIntent(intent));
+        handleShareIntent(intent);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        setIntent(fixShareIntent(getIntent()));
+        handleShareIntent(getIntent());
     }
 
-    private android.content.Intent fixShareIntent(android.content.Intent intent) {
+    private void handleShareIntent(android.content.Intent intent) {
         if (intent == null || !android.content.Intent.ACTION_SEND.equals(intent.getAction())) {
-            return intent;
+            return;
         }
         
         android.net.Uri uri = intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM);
@@ -105,18 +105,30 @@ if (fs.existsSync(mainActivityPath)) {
                     inputStream.close();
                     outputStream.close();
                     
-                    // Rewrite the Intent Payload to the Cache File path for Capacitor WebView Plugins to consume cleanly
-                    intent.putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.fromFile(tempFile));
+                    final String safeUri = android.net.Uri.fromFile(tempFile).toString();
+                    
+                    // Fire Native JS Event into WebView securely!
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (bridge != null && bridge.getWebView() != null) {
+                                String script = "window.dispatchEvent(new CustomEvent('nativeShareIntent', { detail: { url: '" + safeUri + "' } }));";
+                                bridge.getWebView().evaluateJavascript(script, null);
+                            }
+                        }
+                    });
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        return intent;
+        
+        // Consume intent so it doesn't fire again
+        setIntent(new android.content.Intent());
     }
 `;
 
-    if (!mainActivity.includes('fixShareIntent')) {
+    if (!mainActivity.includes('handleShareIntent')) {
         // Find the last curly brace closing the MainActivity class and inject our methods
         const lastBraceIndex = mainActivity.lastIndexOf('}');
         if (lastBraceIndex !== -1) {
@@ -125,7 +137,7 @@ if (fs.existsSync(mainActivityPath)) {
             console.log('Successfully injected Native Cache Scoped Storage Bypass into MainActivity.java');
         }
     } else {
-        console.log('MainActivity.java already contains fixShareIntent.');
+        console.log('MainActivity.java already contains handleShareIntent.');
     }
 }
 
