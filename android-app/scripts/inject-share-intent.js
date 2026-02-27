@@ -56,7 +56,7 @@ if (fs.existsSync(mainActivityPath)) {
         public static final java.util.ArrayList<String> pendingIntents = new java.util.ArrayList<>();
         public static final java.util.ArrayList<String> pendingIntentTexts = new java.util.ArrayList<>();
 
-        @com.getcapacitor.annotation.PluginMethod
+        @com.getcapacitor.PluginMethod
         public void getPendingIntents(com.getcapacitor.PluginCall call) {
             com.getcapacitor.JSObject ret = new com.getcapacitor.JSObject();
             if (!pendingIntents.isEmpty()) {
