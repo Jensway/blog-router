@@ -67,6 +67,21 @@ onMounted(() => {
     }
   })
 
+  // Listen for Native Java Injected Text/URL Sharing (Edge Browser, etc.)
+  window.addEventListener('nativeShareIntentText', (e) => {
+    if (e.detail && e.detail.text) {
+      showToast('获取到外部文本分享')
+      
+      const sharedData = {
+        text: e.detail.text,
+        url: '',
+        title: 'Share Intent Text'
+      }
+      localStorage.setItem('shared_intent_payload', JSON.stringify(sharedData))
+      router.push('/messages')
+    }
+  })
+
   // Also check on boot in case the app was launched directly from Share
   checkIntent()
 
