@@ -784,6 +784,227 @@
             color: var(--text-ui);
         }
 
+        /* ===== 分类树 ===== */
+        .cat-tree {
+            padding: 0 4px;
+        }
+
+        .cat-node {
+            user-select: none;
+        }
+
+        .cat-node-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 8px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text-sub);
+            font-size: 13px;
+            position: relative;
+        }
+
+        .cat-node-row:hover {
+            background: var(--bg-hover);
+            color: var(--text-ui);
+        }
+
+        .cat-node-row.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .cat-node-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            opacity: .5;
+            transition: transform .15s;
+        }
+
+        .cat-node-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .cat-node-toggle.empty {
+            visibility: hidden;
+        }
+
+        .cat-node-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cat-node-count {
+            font-size: 11px;
+            opacity: .6;
+            margin-left: auto;
+        }
+
+        .cat-node-row.active .cat-node-count {
+            opacity: .8;
+        }
+
+        .cat-node-actions {
+            display: none;
+            gap: 2px;
+            margin-left: 4px;
+        }
+
+        .cat-node-row:hover .cat-node-actions {
+            display: flex;
+        }
+
+        .cat-node-row.active .cat-node-actions {
+            display: flex;
+        }
+
+        .cat-node-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 1px 3px;
+            color: inherit;
+            font-size: 12px;
+            border-radius: 3px;
+            opacity: .7;
+            line-height: 1;
+        }
+
+        .cat-node-actions button:hover {
+            opacity: 1;
+            background: rgba(128, 128, 128, .2);
+        }
+
+        .cat-children {
+            padding-left: 16px;
+            overflow: hidden;
+        }
+
+        /* ===== 标签建议浮层 ===== */
+        .tag-suggest {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            max-height: 160px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+            display: none;
+        }
+
+        .tag-suggest.show {
+            display: block;
+        }
+
+        .tag-suggest-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-ui);
+        }
+
+        .tag-suggest-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .tag-suggest-item .count {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        /* 侧边栏标签列表 */
+        .sidebar-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: rgba(128, 128, 128, .1);
+            color: var(--text-sub);
+            cursor: pointer;
+            margin: 2px;
+        }
+
+        .sidebar-tag:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .sidebar-tag.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .sidebar-tag .tag-cnt {
+            font-size: 10px;
+            opacity: .7;
+        }
+
+        /* 分类选择器下拉 */
+        .cat-picker-wrapper {
+            position: relative;
+        }
+
+        .cat-picker-dropdown {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            z-index: 100;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            max-height: 240px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+            display: none;
+        }
+
+        .cat-picker-dropdown.show {
+            display: block;
+        }
+
+        .cat-picker-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-ui);
+        }
+
+        .cat-picker-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .cat-picker-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .cat-picker-search {
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 10px;
+            font-size: 13px;
+            background: transparent;
+            color: var(--text-ui);
+            outline: none;
+        }
+
         #tiny-editor-container {
             flex: 1;
             overflow: hidden;
@@ -1292,19 +1513,22 @@
             padding: 16px 24px;
             border-top: 1px solid var(--border);
             display: flex;
+            align-items: flex-end;
             gap: 10px;
         }
 
-        .plaza-input-area textarea {
-            flex: 1;
-            resize: none;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 14px;
-            background: var(--bg-body);
-            color: var(--text-ui);
-            height: 60px;
+        .ai-input-container:focus-within {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+        }
+
+        .icon-action-btn {
+            transition: all 0.2s;
+        }
+
+        .icon-action-btn:hover {
+            background: var(--bg-hover) !important;
+            color: var(--primary) !important;
         }
 
         .plaza-msg-file {
@@ -1343,23 +1567,23 @@
                 inset: 0;
                 width: 100% !important;
                 height: 100%;
-                display: none;
+                display: none !important;
             }
 
             .view-sidebar .sidebar {
-                display: flex;
+                display: flex !important;
             }
 
             .view-list .post-list-container {
-                display: flex;
+                display: flex !important;
             }
 
             .view-editor .editor-container {
-                display: flex;
+                display: flex !important;
             }
 
             .view-plaza .plaza-container {
-                display: flex;
+                display: flex !important;
             }
 
             .mobile-back-btn {
@@ -1406,33 +1630,50 @@
 
     <div class="app-container" id="appPage" style="display:none;">
         <aside class="sidebar">
-            <div class="sidebar-header">
+            <div class="sidebar-header" style="justify-content:space-between;border-bottom:none;padding-bottom:0;">
                 <div class="logo">
-                    <div class="logo-icon"><i data-lucide="book-open"></i></div>
-                    <span>日志系统</span>
+                    <div class="logo-icon"><i data-lucide="layers"></i></div>
+                    <span style="font-weight:600;letter-spacing:0.5px;">Share Center</span>
                 </div>
             </div>
             <nav class="sidebar-nav">
+                <!-- 主菜单 -->
                 <div class="nav-section">
-                    <div class="nav-section-title">我的</div>
-                    <div class="nav-item active" data-view="posts"><i data-lucide="file-text"
-                            style="width:18px;"></i><span>全部日志</span><span class="nav-item-badge"
-                            id="postCount">0</span></div>
-                    <div class="nav-item" data-view="drafts"><i data-lucide="edit-3"
-                            style="width:18px;"></i><span>草稿箱</span><span class="nav-item-badge"
-                            id="draftCount">0</span></div>
-                    <div class="nav-item" data-view="trash"><i data-lucide="trash-2"
-                            style="width:18px;"></i><span>回收站</span></div>
-                    <div class="nav-item" data-view="plaza"><i data-lucide="message-circle"
-                            style="width:18px;"></i><span>消息广场</span></div>
+                    <div class="nav-section-title" style="margin-top:8px;">主菜单</div>
+                    <div class="nav-item active" data-view="posts">
+                        <i data-lucide="inbox" style="width:18px;"></i><span>日志中心</span>
+                        <span class="nav-item-badge" id="postCount">0</span>
+                    </div>
+                    <div class="nav-item" data-view="plaza">
+                        <i data-lucide="radio" style="width:18px;"></i><span style="font-weight:500;">消息广场</span>
+                    </div>
+                    <div class="nav-item" data-view="drafts" style="opacity:0.8;">
+                        <i data-lucide="edit-3" style="width:16px;"></i><span>草稿箱</span>
+                        <span class="nav-item-badge" id="draftCount">0</span>
+                    </div>
+                    <div class="nav-item" data-view="trash" style="opacity:0.8;">
+                        <i data-lucide="trash-2" style="width:16px;"></i><span>回收站</span>
+                    </div>
                 </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">分类</div>
-                    <div id="categoryList"></div>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">标签</div>
-                    <div id="tagList"></div>
+
+                <!-- 过滤器 (仅在日志列表显示时相关) -->
+                <div id="filterContainer">
+                    <div style="height:1px;background:var(--border);margin:16px 20px 8px 20px;opacity:0.5;"></div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title"
+                            style="display:flex;align-items:center;justify-content:space-between;">
+                            <span>按分类过滤</span>
+                            <button class="icon-btn" id="addRootCatBtn" title="新建分类"
+                                style="width:20px;height:20px;font-size:14px;padding:0;">+</button>
+                        </div>
+                        <div class="cat-tree" id="categoryTree"></div>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">按标签过滤</div>
+                        <div id="tagCloud" style="padding:4px 8px;"></div>
+                    </div>
                 </div>
             </nav>
             <div class="sidebar-footer">
@@ -1459,12 +1700,18 @@
                     <span id="listTitle">全部日志</span>
                 </div>
                 <div style="display:flex;gap:6px;">
-                    <label class="btn btn-secondary" style="padding:6px 10px;cursor:pointer;" title="导入网页">
+                    <label class="btn btn-secondary" style="padding:6px 10px;cursor:pointer;" title="导入网页"
+                        id="importBtnGroup">
                         <i data-lucide="globe" style="width:14px;"></i>
                         <input type="file" id="htmlImportInput" accept=".html,.htm" style="display:none;">
                     </label>
                     <button class="btn btn-primary" style="padding:6px 12px;" id="newPostBtn">
                         <i data-lucide="plus" style="width:14px;"></i> 新建
+                    </button>
+                    <!-- 回收站专属操作 -->
+                    <button class="btn btn-secondary" style="padding:6px 12px;display:none;color:var(--danger);"
+                        id="emptyTrashBtn">
+                        <i data-lucide="trash-2" style="width:14px;"></i> 清空
                     </button>
                 </div>
             </div>
@@ -1479,22 +1726,7 @@
             <div class="editor-header">
                 <button class="mobile-back-btn" id="backToList"><i data-lucide="chevron-left"></i></button>
                 <input type="text" class="editor-title-input" id="editorTitle" placeholder="输入标题..." disabled>
-                <div style="position:relative;">
-                    <button class="icon-btn" id="themeBtn" title="主题"><i data-lucide="palette"
-                            style="width:18px;"></i></button>
-                    <div class="theme-dropdown" id="themeDropdown">
-                        <div class="theme-section">亮色</div>
-                        <div class="theme-item" data-theme="github"><span class="preview"
-                                style="background:#fff;"></span> GitHub</div>
-                        <div class="theme-section">暗色</div>
-                        <div class="theme-item active" data-theme="vscode-dark"><span class="preview"
-                                style="background:#1e1e1e;"></span> VS Code</div>
-                        <div class="theme-item" data-theme="monokai"><span class="preview"
-                                style="background:#272822;"></span> Monokai</div>
-                        <div class="theme-item" data-theme="dracula"><span class="preview"
-                                style="background:#282a36;"></span> Dracula</div>
-                    </div>
-                </div>
+
                 <button class="icon-btn edit-only" id="pinBtn" title="置顶"><i data-lucide="pin"
                         style="width:18px;"></i></button>
                 <button class="icon-btn edit-only" id="starBtn" title="收藏"><i data-lucide="star"
@@ -1505,11 +1737,18 @@
             </div>
 
             <div class="meta-toolbar">
-                <select class="meta-select" id="categorySelect">
-                    <option value="">选择分类</option>
-                </select>
-                <div class="tag-input-wrapper" id="tagInputContainer">
+                <div class="cat-picker-wrapper">
+                    <div class="meta-select" id="categorySelect" style="cursor:pointer;" tabindex="0">选择分类</div>
+                    <div class="cat-picker-dropdown" id="catPickerDropdown">
+                        <input type="text" class="cat-picker-search" id="catPickerSearch" placeholder="搜索分类...">
+                        <div id="catPickerList"></div>
+                        <div class="cat-picker-item" style="color:var(--primary);border-top:1px solid var(--border);"
+                            id="catPickerAdd">+ 新建分类</div>
+                    </div>
+                </div>
+                <div class="tag-input-wrapper" id="tagInputContainer" style="position:relative;">
                     <input type="text" class="tag-input" id="tagInput" placeholder="+ 标签">
+                    <div class="tag-suggest" id="tagSuggest"></div>
                 </div>
                 <label class="icon-btn" title="附件"
                     style="border:1px solid var(--border);width:auto;padding:0 8px;font-size:12px;gap:4px;">
@@ -1532,6 +1771,8 @@
                 </div>
                 <div style="display:flex;gap:10px;">
                     <button class="btn btn-danger" id="deleteBtn" style="display:none;">删除</button>
+                    <button class="btn btn-secondary" id="restoreBtn" style="display:none;">恢复基础日志</button>
+                    <button class="btn btn-danger" id="hardDeleteBtn" style="display:none;">彻底粉碎</button>
                     <button class="btn btn-secondary" id="saveDraftBtn">存草稿</button>
                     <button class="btn btn-primary" id="publishBtn">发布</button>
                 </div>
@@ -1547,13 +1788,29 @@
             </div>
             <div class="plaza-messages" id="plazaMessages"></div>
             <div class="plaza-input-area">
-                <textarea id="plazaInput" placeholder="说点什么..."></textarea>
-                <input type="file" id="plazaFile" style="display:none" accept="*/*">
-                <button class="btn btn-secondary" onclick="document.getElementById('plazaFile').click()"
-                    style="height:60px;width:60px;border-radius:12px;">
-                    <i data-lucide="upload" style="width:22px;height:22px;"></i>
-                </button>
-                <button class="btn btn-primary" id="plazaSendBtn" style="height:60px;">发送</button>
+                <div class="ai-input-container"
+                    style="flex:1; display:flex; flex-direction:column; background:var(--bg-body); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color 0.2s;">
+                    <textarea id="plazaInput" placeholder="说点什么..."
+                        style="width:100%; min-height:44px; padding:12px 14px 4px 14px; border:none; background:transparent; font-size:14px; color:var(--text-ui); outline:none; resize:none; overflow-y:hidden;"></textarea>
+
+                    <div
+                        style="display:flex; align-items:center; justify-content:space-between; padding:4px 8px 8px 8px;">
+                        <div style="display:flex; gap:4px;">
+                            <input type="file" id="plazaFile" style="display:none" accept="*/*">
+                            <button class="icon-action-btn btn btn-ghost"
+                                onclick="document.getElementById('plazaFile').click()" title="发送图片/文件"
+                                style="width:36px; height:36px; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--text-sub);">
+                                <i data-lucide="paperclip" style="width:18px;height:18px;"></i>
+                            </button>
+                            <button class="icon-action-btn btn btn-ghost" id="plazaClipboardBtn" title="一键粘贴"
+                                style="width:36px; height:36px; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--text-sub);">
+                                <i data-lucide="clipboard" style="width:18px;height:18px;"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-primary" id="plazaSendBtn"
+                            style="height:36px; width:60px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0;">发送</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1566,30 +1823,42 @@
             </div>
             <div class="modal-body">
                 <div style="margin-bottom:20px;">
-                    <label class="form-label">添加分类</label>
-                    <div style="display:flex;gap:8px;">
-                        <input type="text" class="form-input" id="newCategoryInput" placeholder="分类名称">
-                        <button class="btn btn-primary" id="addCategoryBtn">添加</button>
-                    </div>
+                    <label class="form-label">分类与标签</label>
+                    <p style="font-size:12px;color:var(--text-sub);">分类可在左侧边栏直接管理（添加、重命名、删除）。<br>标签在编辑文章时直接输入即可自动创建。</p>
                 </div>
                 <div style="margin-bottom:20px;">
-                    <label class="form-label">添加标签</label>
-                    <div style="display:flex;gap:8px;">
-                        <input type="text" class="form-input" id="newTagInput" placeholder="标签名称">
-                        <button class="btn btn-primary" id="addTagBtn">添加</button>
+                    <label class="form-label">系统界面主题</label>
+                    <p style="font-size:12px;color:var(--text-sub);margin-bottom:8px;">设置整个系统的皮肤与日志代码块高亮配色。</p>
+                    <div class="theme-dropdown" id="themeDropdown"
+                        style="display:block; position:static; box-shadow:none; border:1px solid var(--border); width:100%; border-radius:6px;">
+                        <div class="theme-section">亮色</div>
+                        <div class="theme-item" data-theme="github"><span class="preview"
+                                style="background:#fff;"></span> GitHub</div>
+                        <div class="theme-section">暗色</div>
+                        <div class="theme-item active" data-theme="vscode-dark"><span class="preview"
+                                style="background:#1e1e1e;"></span> VS Code</div>
+                        <div class="theme-item" data-theme="monokai"><span class="preview"
+                                style="background:#272822;"></span> Monokai</div>
+                        <div class="theme-item" data-theme="dracula"><span class="preview"
+                                style="background:#282a36;"></span> Dracula</div>
                     </div>
                 </div>
                 <div style="margin-bottom:20px;">
                     <label class="form-label">API 令牌（用于手机 APP 等）</label>
-                    <p style="font-size:12px;color:var(--text-sub);margin-bottom:8px;">在手机 APP 里填写「服务器地址」和「API 令牌」即可登录。令牌只显示一次，请妥善保存。</p>
+                    <p style="font-size:12px;color:var(--text-sub);margin-bottom:8px;">在手机 APP 里填写「服务器地址」和「API
+                        令牌」即可登录。令牌只显示一次，请妥善保存。</p>
                     <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input type="text" class="form-input" id="newTokenNameInput" placeholder="令牌名称，如：我的手机" style="flex:1;">
+                        <input type="text" class="form-input" id="newTokenNameInput" placeholder="令牌名称，如：我的手机"
+                            style="flex:1;">
                         <button class="btn btn-primary" id="addTokenBtn">创建令牌</button>
                     </div>
-                    <div id="tokenList" style="border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:auto;">
-                        <div class="token-empty" style="padding:12px;color:var(--text-sub);font-size:13px;">暂无令牌，点击上方创建</div>
+                    <div id="tokenList"
+                        style="border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:auto;">
+                        <div class="token-empty" style="padding:12px;color:var(--text-sub);font-size:13px;">暂无令牌，点击上方创建
+                        </div>
                     </div>
-                    <div id="tokenCreatedBox" style="display:none;margin-top:10px;padding:12px;background:var(--bg-hover);border-radius:6px;">
+                    <div id="tokenCreatedBox"
+                        style="display:none;margin-top:10px;padding:12px;background:var(--bg-hover);border-radius:6px;">
                         <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px;">新令牌（仅显示一次，请复制保存）：</div>
                         <div style="display:flex;gap:8px;align-items:center;">
                             <code id="tokenValueDisplay" style="flex:1;word-break:break-all;font-size:13px;"></code>
@@ -1627,6 +1896,33 @@
             let posts = [], categories = [], tags = [], currentTags = [], ws;
             let rawContent = '';
 
+            // 局域网智能直连（仅限上传）：检测可直连服务器内网IP，加速文件传输，UI 保持原访问路径（如外网 HTTPS）
+            window.lanUploadRoot = ''; // 如果探测成功，存放 `http://ip:port`
+            window.sessionToken = ''; // 保存登录Token，用于局域网跨域上传鉴权
+
+            async function tryLanRedirect() {
+                // 如果当前已经是通过局域网IP访问，则不需要探测
+                if (/^(\d+\.){3}\d+$/.test(location.hostname) || location.hostname === 'localhost') return;
+                try {
+                    const res = await fetch('/api/lan-ips', { credentials: 'same-origin' });
+                    const data = await res.json();
+                    if (!data.ips || !data.ips.length) return;
+                    // 并行探测所有IP
+                    const racePromises = data.ips.map(ip => {
+                        const url = `http://${ip}:${data.port || 5000}/api/session`;
+                        return fetch(url, { mode: 'cors', credentials: 'omit', signal: AbortSignal.timeout(1500) })
+                            .then(r => r.ok ? ip : Promise.reject())
+                            .catch(() => Promise.reject());
+                    });
+                    const fastestIp = await Promise.any(racePromises).catch(() => null);
+                    if (fastestIp) {
+                        window.lanUploadRoot = `http://${fastestIp}:${data.port || 5000}`;
+                        console.log('检测到内网可达，大文件传输将自动切换为局域网高速通道:', window.lanUploadRoot);
+                        toast('已开启局域网上传加速');
+                    }
+                } catch (e) { /* 静默失败 */ }
+            }
+
             function toast(msg) {
                 const t = $('toast');
                 t.textContent = msg;
@@ -1644,14 +1940,19 @@
                 document.body.className = document.body.className.replace(/view-\S+/g, '') + ' view-' + v;
             }
 
+
+
             function connectWS() {
                 const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
                 ws = new WebSocket(proto + '//' + location.host + '/ws');
-                ws.onmessage = e => {
+                ws.onmessage = async (e) => {
                     try {
                         const msg = JSON.parse(e.data);
-                        if (msg.type === 'new_message') {
-                            // 检查是否已存在（避免重复）
+
+                        // Standard WebSocket messages
+                        if (msg.type === 'attachment_added') {
+                            loadAttachments(msg.data.post_id);
+                        } else if (msg.type === 'new_message') {
                             const existing = document.querySelector(`.plaza-msg[data-id="${msg.data.id}"]`);
                             if (!existing) {
                                 renderMessages([msg.data], true);
@@ -1729,10 +2030,16 @@
                             fd.append('file', blobInfo.blob(), blobInfo.filename());
                             if (currentPost) fd.append('post_id', currentPost.id);
 
-                            fetch('/api/upload', {
+                            const uploadUrl = window.lanUploadRoot ? window.lanUploadRoot + '/api/upload' : '/api/upload';
+                            const headers = {};
+                            if (window.lanUploadRoot && window.sessionToken) headers['X-Session-Token'] = window.sessionToken;
+
+                            fetch(uploadUrl, {
                                 method: 'POST',
+                                headers: headers,
                                 body: fd,
-                                credentials: 'same-origin'
+                                // 如果走跨域局域网，并且后端已支持头部带 token，这里可以 omit
+                                credentials: window.lanUploadRoot ? 'omit' : 'same-origin'
                             })
                                 .then(r => r.json())
                                 .then(res => {
@@ -1764,7 +2071,33 @@
 
             function showPreview(html) {
                 const container = $('preview-container');
-                container.innerHTML = html ||
+                let safeHtml = html || '';
+
+                if (safeHtml) {
+                    const apiBase = window.lanUploadRoot || '';
+
+                    // HTML <img> tags: Extract the entire src string.
+                    safeHtml = safeHtml.replace(/src=['"]([^'"]+)['"]/gi, function (match, fullUrl) {
+                        if (!fullUrl.includes('/api/file/')) return match;
+                        let filename = fullUrl.split('?')[0].split('/').filter(Boolean).pop();
+                        try {
+                            filename = decodeURIComponent(filename);
+                        } catch (e) { }
+                        return 'src="' + apiBase + encodeURI('/api/file/' + filename) + '"';
+                    });
+
+                    // Markdown Syntax images: ![alt](url)
+                    safeHtml = safeHtml.replace(/!\[([^\]]*)\]\(([^)]+)\)/gi, function (match, alt, fullUrl) {
+                        if (!fullUrl.includes('/api/file/')) return match;
+                        let filename = fullUrl.split('?')[0].split('/').filter(Boolean).pop();
+                        try {
+                            filename = decodeURIComponent(filename);
+                        } catch (e) { }
+                        return '![' + alt + '](' + apiBase + encodeURI('/api/file/' + filename) + ')';
+                    });
+                }
+
+                container.innerHTML = safeHtml ||
                     '<p style="color:var(--text-sub);text-align:center;padding:40px;">点击"编辑"开始写作</p>';
 
                 // 1) Prism 识别：把 <pre class="language-xxx"> 的语言 class 补到 <code> 上
@@ -1846,6 +2179,14 @@
             }
 
             function showView(view) {
+                const isLogView = view !== 'plaza';
+                const listEl = document.querySelector('.post-list-container');
+                if (listEl) listEl.style.display = isLogView ? 'flex' : 'none';
+                const filterEl = $('filterContainer');
+                if (filterEl) filterEl.style.display = isLogView ? 'block' : 'none';
+                const newBtn = $('headerNewBtn');
+                if (newBtn) newBtn.style.display = isLogView ? 'flex' : 'none';
+
                 $('editorContainer').style.display = view === 'editor' ? 'flex' : 'none';
                 $('plazaContainer').classList.toggle('active', view === 'plaza');
                 if (view === 'plaza') loadMessages();
@@ -1854,6 +2195,7 @@
             function checkSession() {
                 api('/api/session').then(d => {
                     if (d.logged_in) {
+                        window.sessionToken = d.token || '';
                         currentUser = d.username;
                         isAdmin = d.is_admin;
                         $('userName').textContent = d.username;
@@ -1864,9 +2206,16 @@
                         if (isAdmin) $('adminArea').style.display = 'block';
                         loadData();
                         connectWS();
+                        tryLanRedirect(); // 检测局域网/ZeroTier直连
                         lucide.createIcons();
                         changeTheme(localStorage.getItem('editorTheme') || 'vscode-dark');
-                        showPreview('');
+
+                        // 默认进广场
+                        showView('plaza');
+                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                        const plazaNav = Array.from(document.querySelectorAll('.nav-item')).find(n => n.querySelector('span')?.textContent === '消息广场');
+                        if (plazaNav) plazaNav.classList.add('active');
+
                         if (window.innerWidth > 768) document.body.classList.remove('view-sidebar');
                     } else {
                         $('loginPage').style.display = 'flex';
@@ -1874,44 +2223,151 @@
                 }).catch(() => $('loginPage').style.display = 'flex');
             }
 
+            let selectedCategory = ''; // 当前编辑器选中的分类名
+            let allTags = []; // [{name, count}]
+
             function loadData() {
                 api('/api/categories').then(data => {
                     categories = data || [];
-                    $('categoryList').innerHTML = categories.map(c =>
-                        `<div class="nav-item" data-filter="cat:${c.name}">
-                    <i data-lucide="folder" style="width:16px;"></i><span>${c.name}</span>
-                </div>`).join('');
-                    $('categorySelect').innerHTML = '<option value="">未分类</option>' +
-                        categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-                    lucide.createIcons();
+                    renderCategoryTree(categories);
+                    renderCatPicker(categories);
                 });
 
                 api('/api/tags').then(data => {
-                    tags = data || [];
-                    $('tagList').innerHTML = tags.map(t =>
-                        `<div class="nav-item" data-filter="tag:${t.name}">
-                    <i data-lucide="tag" style="width:16px;"></i><span>${t.name}</span>
-                </div>`).join('');
-                    lucide.createIcons();
+                    allTags = data || [];
+                    const cloud = $('tagCloud');
+                    if (!allTags.length) { cloud.innerHTML = '<span style="font-size:12px;color:var(--text-sub);">暂无标签</span>'; return; }
+                    cloud.innerHTML = allTags.map(t =>
+                        `<span class="sidebar-tag" data-filter="tag:${escapeHtml(t.name)}">${escapeHtml(t.name)} <span class="tag-cnt">${t.count}</span></span>`
+                    ).join('');
                 });
 
                 loadPosts();
             }
 
+            // ===== 侧边栏分类树 =====
+            const catExpandState = JSON.parse(localStorage.getItem('catExpand') || '{}');
+            function saveCatExpand() { localStorage.setItem('catExpand', JSON.stringify(catExpandState)); }
+
+            function renderCategoryTree(nodes) {
+                $('categoryTree').innerHTML = '';
+                nodes.forEach(n => $('categoryTree').appendChild(buildCatNode(n)));
+            }
+
+            function buildCatNode(node) {
+                const div = document.createElement('div');
+                div.className = 'cat-node';
+                const hasChildren = node.children && node.children.length > 0;
+                const isExpanded = catExpandState[node.id] !== false; // 默认展开
+
+                const row = document.createElement('div');
+                row.className = 'cat-node-row';
+                row.dataset.catName = node.name;
+                row.dataset.catId = node.id;
+                row.innerHTML = `
+                    <span class="cat-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'empty'}">▶</span>
+                    <span class="cat-node-name">${escapeHtml(node.name)}</span>
+                    ${node.count ? `<span class="cat-node-count">${node.count}</span>` : ''}
+                    <span class="cat-node-actions">
+                        <button title="添加子分类" data-cat-add="${node.id}">+</button>
+                        <button title="重命名" data-cat-rename="${node.id}" data-old-name="${escapeHtml(node.name)}">✎</button>
+                        <button title="删除" data-cat-delete="${node.id}">✕</button>
+                    </span>
+                `;
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('.cat-node-actions')) return;
+                    if (e.target.closest('.cat-node-toggle') && hasChildren) {
+                        const toggle = row.querySelector('.cat-node-toggle');
+                        const children = div.querySelector('.cat-children');
+                        const expanded = toggle.classList.toggle('expanded');
+                        children.style.display = expanded ? '' : 'none';
+                        catExpandState[node.id] = expanded;
+                        saveCatExpand();
+                        return;
+                    }
+                    // 点击分类名 → 筛选
+                    loadPosts('cat:' + node.name);
+                    document.querySelectorAll('.cat-node-row').forEach(r => r.classList.remove('active'));
+                    row.classList.add('active');
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                });
+                div.appendChild(row);
+
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'cat-children';
+                    childrenDiv.style.display = isExpanded ? '' : 'none';
+                    node.children.forEach(c => childrenDiv.appendChild(buildCatNode(c)));
+                    div.appendChild(childrenDiv);
+                }
+                return div;
+            }
+
+            // ===== 编辑器分类选择器 =====
+            function renderCatPicker(treeData) {
+                const list = $('catPickerList');
+                list.innerHTML = '';
+                function flatten(nodes, depth) {
+                    nodes.forEach(n => {
+                        const item = document.createElement('div');
+                        item.className = 'cat-picker-item';
+                        item.dataset.catName = n.name;
+                        item.style.paddingLeft = (10 + depth * 16) + 'px';
+                        item.textContent = n.name;
+                        if (n.name === selectedCategory) item.classList.add('active');
+                        item.addEventListener('click', () => {
+                            selectedCategory = n.name;
+                            $('categorySelect').textContent = n.name;
+                            $('catPickerDropdown').classList.remove('show');
+                            list.querySelectorAll('.cat-picker-item').forEach(i => i.classList.remove('active'));
+                            item.classList.add('active');
+                        });
+                        list.appendChild(item);
+                        if (n.children) flatten(n.children, depth + 1);
+                    });
+                }
+                // 添加"未分类"选项
+                const uncatItem = document.createElement('div');
+                uncatItem.className = 'cat-picker-item' + (!selectedCategory ? ' active' : '');
+                uncatItem.textContent = '未分类';
+                uncatItem.addEventListener('click', () => {
+                    selectedCategory = '';
+                    $('categorySelect').textContent = '选择分类';
+                    $('catPickerDropdown').classList.remove('show');
+                    list.querySelectorAll('.cat-picker-item').forEach(i => i.classList.remove('active'));
+                    uncatItem.classList.add('active');
+                });
+                list.appendChild(uncatItem);
+                flatten(treeData, 0);
+            }
+
             function loadPosts(filter = '', switchView = true) {
                 let url = '/api/posts?sort=created_at';
+                const isTrash = filter === 'trash';
+
                 if (filter.startsWith('cat:')) url += '&category=' + encodeURIComponent(filter.substring(4));
                 else if (filter.startsWith('tag:')) url += '&tag=' + encodeURIComponent(filter.substring(4));
                 else if (filter === 'drafts') url += '&draft=1';
-                else if (filter === 'trash') url += '&trash=1';
+                else if (isTrash) url += '&trash=1';
                 if (switchView && window.innerWidth <= 768) setMobileView('list');
+
+                // Toggle Header Buttons for Trash
+                if (isTrash) {
+                    $('newPostBtn').style.display = 'none';
+                    if ($('importBtnGroup')) $('importBtnGroup').style.display = 'none';
+                    if ($('emptyTrashBtn')) $('emptyTrashBtn').style.display = 'flex';
+                } else {
+                    $('newPostBtn').style.display = 'flex';
+                    if ($('importBtnGroup')) $('importBtnGroup').style.display = 'flex';
+                    if ($('emptyTrashBtn')) $('emptyTrashBtn').style.display = 'none';
+                }
 
                 api(url).then(data => {
                     posts = data || [];
                     $('postCount').textContent = posts.filter(p => !p.is_draft).length;
                     $('draftCount').textContent = posts.filter(p => p.is_draft).length;
                     $('postList').innerHTML = posts.map(p => `
-    <div class="post-card ${currentPost?.id === p.id ? 'active' : ''}" data-id="${p.id}">
+    <div class="post-card ${currentPost?.id === p.id ? 'active' : ''}" data-id="${p.id}" onclick="loadPost('${p.id}')">
         <div class="post-card-title">
             ${p.is_pinned ? '<span class="badge badge-pinned">顶</span>' : ''}
             ${p.content_type === 'html' ? '<span class="badge badge-html">网页</span>' : ''}
@@ -1925,7 +2381,8 @@
                 });
             }
 
-            function loadPost(id) {
+            window.loadPost = function loadPost(id) {
+                toast('正在载入: ' + id);
                 api('/api/posts/' + id).then(p => {
                     currentPost = p;
                     rawContent = p.content || '';
@@ -1940,16 +2397,36 @@
                     const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s/g, '');
                     $('wordCount').textContent = text.length + ' 字';
 
-                    $('categorySelect').value = p.category || '';
+                    selectedCategory = p.category || '';
+                    $('categorySelect').textContent = selectedCategory || '选择分类';
                     currentTags = p.tags || [];
                     renderCurrentTags();
                     $('pinBtn').classList.toggle('active', p.is_pinned);
                     $('starBtn').classList.toggle('active', p.is_starred);
-                    $('deleteBtn').style.display = 'inline-flex';
+
+                    const isTrash = p.is_deleted === 1;
+                    if (isTrash) {
+                        $('deleteBtn').style.display = 'none';
+                        $('saveDraftBtn').style.display = 'none';
+                        $('publishBtn').style.display = 'none';
+                        $('restoreBtn').style.display = 'inline-flex';
+                        $('hardDeleteBtn').style.display = 'inline-flex';
+                        $('startEditBtn').style.display = 'none'; // 回收站内容禁止编辑
+                    } else {
+                        $('deleteBtn').style.display = 'inline-flex';
+                        $('saveDraftBtn').style.display = 'inline-flex';
+                        $('publishBtn').style.display = 'inline-flex';
+                        $('restoreBtn').style.display = 'none';
+                        $('hardDeleteBtn').style.display = 'none';
+                        $('startEditBtn').style.display = 'inline-flex';
+                    }
+
                     $('saveStatus').textContent = '已保存';
                     loadAttachments(id);
                     if (window.innerWidth <= 768) setMobileView('editor');
                     $$('.post-card').forEach(el => el.classList.toggle('active', el.dataset.id == id));
+                }).catch(err => {
+                    toast('加载失败: ' + err.message);
                 });
             }
 
@@ -1984,12 +2461,16 @@
                 rawContent = '';
                 showView('editor');
                 $('editorTitle').value = '';
-                $('categorySelect').value = '';
+                selectedCategory = '';
+                $('categorySelect').textContent = '选择分类';
                 currentTags = [];
                 renderCurrentTags();
-                $('pinBtn').classList.remove('active');
-                $('starBtn').classList.remove('active');
                 $('deleteBtn').style.display = 'none';
+                $('restoreBtn').style.display = 'none';
+                $('hardDeleteBtn').style.display = 'none';
+                $('saveDraftBtn').style.display = 'inline-flex';
+                $('publishBtn').style.display = 'inline-flex';
+                $('startEditBtn').style.display = 'none'; // 新建直接就是编辑状态
                 $('attachmentList').style.display = 'none';
                 $('saveStatus').textContent = '新建';
                 $('wordCount').textContent = '0 字';
@@ -2019,7 +2500,7 @@
                 const data = {
                     title, content,
                     content_type: currentPost?.content_type || 'html',
-                    category: $('categorySelect').value,
+                    category: selectedCategory,
                     tags: currentTags,
                     is_draft: isDraft,
                     is_pinned: $('pinBtn').classList.contains('active'),
@@ -2049,13 +2530,52 @@
             }
 
             function deletePost() {
-                if (!currentPost || !confirm('删除此日志?')) return;
+                if (!currentPost || !confirm('移入回收站?')) return;
                 api('/api/posts/' + currentPost.id, { method: 'DELETE' }).then(() => {
-                    toast('已删除');
+                    toast('已移入回收站');
                     newPost();
                     loadPosts();
                     setMobileView('list');
                 });
+            }
+
+            // 新增：从回收站恢复文章
+            function restorePost() {
+                if (!currentPost) return;
+                api('/api/posts/' + currentPost.id + '/restore', { method: 'POST' }).then(() => {
+                    toast('已恢复为草稿');
+                    loadPosts('trash');
+                    loadPost(currentPost.id); // 刷新当前文章视图，解除其自身的回收站状态
+                }).catch(e => toast(e.message));
+            }
+
+            // 新增：彻底删除文章
+            function hardDeletePost() {
+                if (!currentPost || !confirm('此操作不可逆，将彻底删除该文章及其附件！确定?')) return;
+                api('/api/posts/' + currentPost.id + '/hard_delete', { method: 'DELETE' }).then(() => {
+                    toast('已彻底删除');
+                    newPost();
+                    loadPosts('trash');
+                    setMobileView('list');
+                }).catch(e => toast(e.message));
+            }
+
+            // 新增：彻底清空回收站
+            if ($('emptyTrashBtn')) {
+                $('emptyTrashBtn').onclick = () => {
+                    if (!confirm('此操作不可逆，将彻底删除回收站内所有文章及其附件！确定清空?')) return;
+                    // 由于后端目前没有直接全部清空的接口，我们在前端遍历调用 hard_delete
+                    const trashPosts = posts.filter(p => true); // 当前就在 trash 视图下
+                    if (!trashPosts.length) return toast('回收站已空');
+                    let count = 0;
+                    Promise.all(trashPosts.map(p =>
+                        api('/api/posts/' + p.id + '/hard_delete', { method: 'DELETE' }).catch(() => null)
+                    )).then(() => {
+                        toast('回收站已清空');
+                        newPost();
+                        loadPosts('trash');
+                    });
+                };
             }
 
             function loadMessages() {
@@ -2067,7 +2587,9 @@
                 const html = msgs.map(m => {
                     let fileHtml = '', downloadBtn = '';
                     if (m.file_url) {
-                        const url = '/api/file/' + m.file_url;
+                        const apiBase = window.lanUploadRoot || '';
+                        const cleanFileName = m.file_url.split('/').filter(Boolean).pop();
+                        const url = apiBase + '/api/file/' + cleanFileName;
                         const fileName = escapeHtml(m.file_name || 'file');
 
                         if (m.file_type === 'image') {
@@ -2094,7 +2616,7 @@
                         }
 
                         downloadBtn = `<i data-lucide="download" class="plaza-msg-action" style="width:14px;" 
-                    onclick="downloadFile('/api/file/${m.file_url}','${fileName}')" title="下载"></i>`;
+                    onclick="downloadFile('${apiBase}/api/file/${cleanFileName}','${fileName}')" title="下载"></i>`;
                     }
 
                     const canDelete = m.username === currentUser || isAdmin;
@@ -2177,8 +2699,14 @@
                         else reject(new Error('HTTP ' + xhr.status));
                     };
                     xhr.onerror = () => reject(new Error('网络错误'));
-                    xhr.open('POST', '/api/upload/chunk');
-                    xhr.withCredentials = true;
+                    const uploadUrl = window.lanUploadRoot ? window.lanUploadRoot + '/api/upload/chunk' : '/api/upload/chunk';
+                    xhr.open('POST', uploadUrl);
+                    if (window.lanUploadRoot) {
+                        xhr.withCredentials = false;
+                        if (window.sessionToken) xhr.setRequestHeader('X-Session-Token', window.sessionToken);
+                    } else {
+                        xhr.withCredentials = true;
+                    }
                     xhr.send(fd);
                 }).catch(err => {
                     if (maxRetries <= 1) throw err;
@@ -2254,16 +2782,20 @@
                 const mergeTimeout = setTimeout(() => mergeAbort.abort(), 5 * 60 * 1000); // 5 分钟
                 let mergeRes;
                 try {
-                    mergeRes = await fetch('/api/upload/merge', {
+                    const mergeUrl = window.lanUploadRoot ? window.lanUploadRoot + '/api/upload/merge' : '/api/upload/merge';
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (window.lanUploadRoot && window.sessionToken) headers['X-Session-Token'] = window.sessionToken;
+
+                    mergeRes = await fetch(mergeUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: headers,
                         body: JSON.stringify({
                             file_id: fileId,
                             filename: file.name,
                             chunks: totalChunks,
                             post_id: 0 // 消息广场不关联日志
                         }),
-                        credentials: 'same-origin',
+                        credentials: window.lanUploadRoot ? 'omit' : 'same-origin',
                         signal: mergeAbort.signal
                     });
                 } catch (e) {
@@ -2317,7 +2849,7 @@
                     };
                     xhr.onload = () => {
                         let res = {};
-                        try { res = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+                        try { res = JSON.parse(xhr.responseText || '{}'); } catch (_) { }
                         if (xhr.status === 200) {
                             if (res.error) reject(new Error(res.error));
                             else resolve(res);
@@ -2328,8 +2860,15 @@
                     };
                     xhr.onerror = () => reject(new Error('网络错误或连接被关闭'));
                     xhr.ontimeout = () => reject(new Error('上传超时，请检查网络或服务端'));
-                    xhr.open('POST', '/api/messages');
-                    xhr.withCredentials = true;
+
+                    const msgUrl = (file && window.lanUploadRoot) ? window.lanUploadRoot + '/api/messages' : '/api/messages';
+                    xhr.open('POST', msgUrl);
+                    if (file && window.lanUploadRoot) {
+                        xhr.withCredentials = false;
+                        if (window.sessionToken) xhr.setRequestHeader('X-Session-Token', window.sessionToken);
+                    } else {
+                        xhr.withCredentials = true;
+                    }
                     xhr.send(fd);
                 });
             }
@@ -2362,9 +2901,9 @@
                     }
                 };
 
+
                 try {
                     let result;
-
                     if (file && file.size >= CHUNK_THRESHOLD) {
                         // 大文件：分块上传
                         toast(`开始上传: ${file.name} (${formatFileSize(file.size)})`);
@@ -2423,7 +2962,7 @@
             function importHTML(file) {
                 const fd = new FormData();
                 fd.append('file', file);
-                fd.append('category', $('categorySelect').value || '');
+                fd.append('category', selectedCategory || '');
                 toast('导入中...');
                 fetch('/api/import/html', { method: 'POST', body: fd, credentials: 'same-origin' })
                     .then(r => r.json())
@@ -2466,6 +3005,22 @@
             };
             $('loginPassword').onkeydown = e => { if (e.key === 'Enter') $('loginBtn').click(); };
 
+            if ($('plazaClipboardBtn')) {
+                $('plazaClipboardBtn').onclick = async () => {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (!text) {
+                            toast('剪贴板为空或不是文本内容');
+                            return;
+                        }
+                        $('plazaInput').value = text;
+                        toast('已读取剪贴板内容，请点击发送');
+                    } catch (err) {
+                        toast('读取剪贴板失败，请允许权限或手动粘贴 (Ctrl+V)');
+                    }
+                };
+            }
+
             document.addEventListener('click', e => {
                 const navView = e.target.closest('.nav-item[data-view]');
                 if (navView) {
@@ -2479,7 +3034,6 @@
                         showView('editor');
                         loadPosts(view);
                     }
-                    return;
                 }
 
                 const filterItem = e.target.closest('.nav-item[data-filter]');
@@ -2528,16 +3082,24 @@
             $('backToList').onclick = () => setMobileView('list');
             $('backFromPlaza').onclick = () => setMobileView('sidebar');
             $('newPostBtn').onclick = newPost;
+            if ($('headerNewBtn')) $('headerNewBtn').onclick = newPost;
             $('saveDraftBtn').onclick = () => savePost(true);
             $('publishBtn').onclick = () => savePost(false);
             $('deleteBtn').onclick = deletePost;
+            if ($('restoreBtn')) $('restoreBtn').onclick = restorePost;
+            if ($('hardDeleteBtn')) $('hardDeleteBtn').onclick = hardDeletePost;
             $('pinBtn').onclick = function () { this.classList.toggle('active'); };
             $('starBtn').onclick = function () { this.classList.toggle('active'); };
             $('plazaSendBtn').onclick = sendMessage;
+            $('plazaInput').oninput = function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            };
             $('plazaInput').onkeydown = e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
+                    setTimeout(() => $('plazaInput').style.height = 'auto', 10);
                 }
             };
 
@@ -2556,16 +3118,123 @@
                 }
             };
 
+            // ===== 标签输入 + 自动补全 =====
             $('tagInput').onkeydown = function (e) {
                 if (e.key === 'Enter') {
-                    const val = this.value.trim();
+                    const val = this.value.trim().replace(/,/g, '');
                     if (val && !currentTags.includes(val)) {
                         currentTags.push(val);
                         renderCurrentTags();
-                        this.value = '';
                     }
+                    this.value = '';
+                    $('tagSuggest').classList.remove('show');
                 }
             };
+            $('tagInput').oninput = function () {
+                const q = this.value.trim().toLowerCase();
+                if (!q) { $('tagSuggest').classList.remove('show'); return; }
+                const matches = allTags.filter(t =>
+                    t.name.toLowerCase().includes(q) && !currentTags.includes(t.name)
+                ).slice(0, 8);
+                if (!matches.length) { $('tagSuggest').classList.remove('show'); return; }
+                $('tagSuggest').innerHTML = matches.map(t =>
+                    `<div class="tag-suggest-item" data-tag="${escapeHtml(t.name)}">${escapeHtml(t.name)} <span class="count">${t.count}</span></div>`
+                ).join('');
+                $('tagSuggest').classList.add('show');
+            };
+            $('tagSuggest').addEventListener('click', e => {
+                const item = e.target.closest('.tag-suggest-item');
+                if (!item) return;
+                const name = item.dataset.tag;
+                if (!currentTags.includes(name)) {
+                    currentTags.push(name);
+                    renderCurrentTags();
+                }
+                $('tagInput').value = '';
+                $('tagSuggest').classList.remove('show');
+            });
+
+            // ===== 分类选择器 =====
+            $('categorySelect').addEventListener('click', () => {
+                $('catPickerDropdown').classList.toggle('show');
+                $('catPickerSearch').value = '';
+                $('catPickerSearch').focus();
+            });
+            $('catPickerSearch').addEventListener('input', function () {
+                const q = this.value.toLowerCase();
+                $('catPickerList').querySelectorAll('.cat-picker-item').forEach(el => {
+                    el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+                });
+            });
+            $('catPickerAdd').addEventListener('click', () => {
+                const name = prompt('新建分类名称：');
+                if (!name || !name.trim()) return;
+                api('/api/categories', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), parent_id: 0 })
+                }).then(() => { loadData(); toast('分类已创建'); });
+                $('catPickerDropdown').classList.remove('show');
+            });
+            document.addEventListener('click', e => {
+                if (!e.target.closest('.cat-picker-wrapper')) $('catPickerDropdown').classList.remove('show');
+                if (!e.target.closest('#tagInputContainer')) $('tagSuggest').classList.remove('show');
+            });
+
+            // ===== 分类树操作（事件委托） =====
+            $('categoryTree').addEventListener('click', e => {
+                const addBtn = e.target.closest('[data-cat-add]');
+                if (addBtn) {
+                    const parentId = parseInt(addBtn.dataset.catAdd);
+                    const name = prompt('子分类名称：');
+                    if (!name || !name.trim()) return;
+                    api('/api/categories', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name.trim(), parent_id: parentId })
+                    }).then(() => { catExpandState[parentId] = true; saveCatExpand(); loadData(); toast('已创建'); });
+                    return;
+                }
+                const renameBtn = e.target.closest('[data-cat-rename]');
+                if (renameBtn) {
+                    const id = renameBtn.dataset.catRename;
+                    const oldName = renameBtn.dataset.oldName;
+                    const name = prompt('重命名分类：', oldName);
+                    if (!name || !name.trim() || name.trim() === oldName) return;
+                    api('/api/categories/' + id, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name.trim() })
+                    }).then(() => { loadData(); toast('已重命名'); });
+                    return;
+                }
+                const deleteBtn = e.target.closest('[data-cat-delete]');
+                if (deleteBtn) {
+                    if (!confirm('删除该分类？子分类将提升到上一级，文章归为未分类。')) return;
+                    api('/api/categories/' + deleteBtn.dataset.catDelete, { method: 'DELETE' })
+                        .then(() => { loadData(); toast('已删除'); });
+                    return;
+                }
+            });
+
+            // ===== 侧边栏「+」添加根分类 =====
+            $('addRootCatBtn').addEventListener('click', () => {
+                const name = prompt('新建分类名称：');
+                if (!name || !name.trim()) return;
+                api('/api/categories', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), parent_id: 0 })
+                }).then(() => { loadData(); toast('分类已创建'); });
+            });
+
+            // ===== 侧边栏标签云点击 =====
+            $('tagCloud').addEventListener('click', e => {
+                const tag = e.target.closest('.sidebar-tag');
+                if (!tag) return;
+                const filter = tag.dataset.filter;
+                loadPosts(filter);
+                document.querySelectorAll('.sidebar-tag').forEach(t => t.classList.remove('active'));
+                tag.classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.cat-node-row').forEach(r => r.classList.remove('active'));
+            });
 
             $('fileInput').onchange = function (e) {
                 if (!currentPost) return toast('请先保存文章');
@@ -2574,7 +3243,16 @@
                     fd.append('file', f);
                     fd.append('post_id', currentPost.id);
                     toast('上传中...');
-                    fetch('/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' })
+                    const uploadUrl = window.lanUploadRoot ? window.lanUploadRoot + '/api/upload' : '/api/upload';
+                    const headers = {};
+                    if (window.lanUploadRoot && window.sessionToken) headers['X-Session-Token'] = window.sessionToken;
+
+                    fetch(uploadUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: fd,
+                        credentials: window.lanUploadRoot ? 'omit' : 'same-origin'
+                    })
                         .then(r => r.json())
                         .then(res => {
                             if (!res.error) {
@@ -2601,7 +3279,7 @@
                         .then(d => {
                             posts = d || [];
                             $('postList').innerHTML = posts.map(p => `
-                        <div class="post-card" data-id="${p.id}">
+                        <div class="post-card" data-id="${p.id}" onclick="window.loadPost('${p.id}')">
                             <div class="post-card-title">
                                 ${p.is_pinned ? '<span class="badge badge-pinned">顶</span>' : ''}
                                 <span>${escapeHtml(p.title || '无标题')}</span>
@@ -2613,12 +3291,6 @@
                         });
                 }, 300);
             };
-
-            $('themeBtn').onclick = e => {
-                e.stopPropagation();
-                $('themeDropdown').classList.toggle('show');
-            };
-            document.addEventListener('click', () => $('themeDropdown').classList.remove('show'));
 
             function loadTokens() {
                 api('/api/tokens').then(list => {
@@ -2642,7 +3314,7 @@
                             api('/api/tokens/' + btn.dataset.id, { method: 'DELETE' }).then(() => { toast('已删除'); loadTokens(); });
                         };
                     });
-                }).catch(() => {});
+                }).catch(() => { });
             }
 
             $('settingsBtn').onclick = () => {
@@ -2653,33 +3325,6 @@
             $('closeSettingsModal').onclick = () => $('settingsModal').classList.remove('show');
             $('logoutBtn').onclick = () => api('/api/logout', { method: 'POST' }).then(() => location.reload());
 
-            $('addCategoryBtn').onclick = () => {
-                const name = $('newCategoryInput').value.trim();
-                if (!name) return;
-                api('/api/categories', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                }).then(() => {
-                    toast('已添加');
-                    $('newCategoryInput').value = '';
-                    loadData();
-                });
-            };
-
-            $('addTagBtn').onclick = () => {
-                const name = $('newTagInput').value.trim();
-                if (!name) return;
-                api('/api/tags', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                }).then(() => {
-                    toast('已添加');
-                    $('newTagInput').value = '';
-                    loadData();
-                });
-            };
 
             $('addTokenBtn').onclick = () => {
                 const name = $('newTokenNameInput').value.trim();
