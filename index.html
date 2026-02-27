@@ -2382,7 +2382,6 @@
             }
 
             window.loadPost = function loadPost(id) {
-                toast('正在载入: ' + id);
                 api('/api/posts/' + id).then(p => {
                     currentPost = p;
                     rawContent = p.content || '';
@@ -2425,8 +2424,6 @@
                     loadAttachments(id);
                     if (window.innerWidth <= 768) setMobileView('editor');
                     $$('.post-card').forEach(el => el.classList.toggle('active', el.dataset.id == id));
-                }).catch(err => {
-                    toast('加载失败: ' + err.message);
                 });
             }
 
