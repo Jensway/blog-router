@@ -2589,6 +2589,14 @@
                         const url = apiBase + '/api/file/' + cleanFileName;
                         const fileName = escapeHtml(m.file_name || 'file');
 
+                        let secureDownloadApiBase = apiBase;
+                        let secureDownloadUrl = url;
+                        // Prevent Chromium "Mixed Content Download" blocks by falling back to the secure origin
+                        if (window.location.protocol === 'https:' && apiBase.startsWith('http://')) {
+                            secureDownloadApiBase = '';
+                            secureDownloadUrl = '/api/file/' + cleanFileName;
+                        }
+
                         if (m.file_type === 'image') {
                             fileHtml = `<div class="plaza-msg-file">
                         <img src="${url}" onclick="window.open('${url}')" 
@@ -2606,14 +2614,14 @@
                             // 其他文件类型显示下载链接
                             fileHtml = `<div class="plaza-msg-file" style="margin-top:8px; padding:8px; background:var(--bg-hover); border-radius:6px;">
                         <i data-lucide="file" style="width:14px; margin-right:6px;"></i>
-                        <a href="${url}" target="_blank" style="color:var(--primary); text-decoration:none;">
+                        <a href="${secureDownloadUrl}" target="_blank" style="color:var(--primary); text-decoration:none;">
                             ${fileName}
                         </a>
                     </div>`;
                         }
 
-                        downloadBtn = `<i data-lucide="download" class="plaza-msg-action" style="width:14px;" 
-                    onclick="downloadFile('${apiBase}/api/file/${cleanFileName}','${fileName}')" title="下载"></i>`;
+                        // Use pseudo-directory appending trick for dumb mobile webkit browsers to bypass Content-Disposition limitations
+                        downloadBtn = `<a href="${secureDownloadApiBase}/api/file/${cleanFileName}/${encodeURIComponent(fileName)}?download=${encodeURIComponent(fileName)}" download="${fileName}" title="下载" class="plaza-msg-action" style="display:inline-flex;color:inherit;text-decoration:none;"><i data-lucide="download" style="width:14px;"></i></a>`;
                     }
 
                     const canDelete = m.username === currentUser || isAdmin;
