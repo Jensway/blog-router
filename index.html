@@ -2216,7 +2216,11 @@
                         const plazaNav = Array.from(document.querySelectorAll('.nav-item')).find(n => n.querySelector('span')?.textContent === '消息广场');
                         if (plazaNav) plazaNav.classList.add('active');
 
-                        if (window.innerWidth > 768) document.body.classList.remove('view-sidebar');
+                        if (window.innerWidth <= 768) {
+                            setMobileView('plaza');
+                        } else {
+                            document.body.classList.remove('view-sidebar');
+                        }
                     } else {
                         $('loginPage').style.display = 'flex';
                     }
@@ -2647,12 +2651,12 @@
 
                 if (prepend) {
                     container.insertAdjacentHTML('afterbegin', html);
-                    // 滚动到新消息
+                    // 滚动到新消息 (顶部)
                     container.scrollTop = 0;
                 } else {
                     container.innerHTML = html;
-                    // 滚动到底部
-                    setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+                    // 初始化加载滚动到顶部（最新消息）
+                    setTimeout(() => container.scrollTop = 0, 100);
                 }
 
                 lucide.createIcons();
