@@ -1707,8 +1707,8 @@
                     <span id="listTitle">全部日志</span>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="icon-btn" style="padding:4px;" id="refreshPostsBtn" title="刷新">
-                        <i data-lucide="refresh-cw" style="width:16px;"></i>
+                    <button class="btn btn-secondary" style="padding:6px 10px;" id="refreshPostsBtn" title="刷新">
+                        <i data-lucide="refresh-cw" style="width:14px;"></i> 刷新
                     </button>
                     <label class="btn btn-secondary" style="padding:6px 10px;cursor:pointer;" title="导入网页"
                         id="importBtnGroup">
@@ -1797,8 +1797,8 @@
                         <i data-lucide="message-circle" style="width:20px;margin-right:8px;"></i>消息广场
                     </h2>
                 </div>
-                <button class="icon-btn" style="padding:4px;" id="refreshPlazaBtn" title="刷新">
-                    <i data-lucide="refresh-cw" style="width:16px;"></i>
+                <button class="btn btn-secondary" style="padding:6px 10px;" id="refreshPlazaBtn" title="刷新">
+                    <i data-lucide="refresh-cw" style="width:14px;"></i> 刷新
                 </button>
             </div>
             <div class="plaza-messages" id="plazaMessages"></div>
@@ -2263,7 +2263,6 @@
                     // If pulled down 120px from top without lifting finger, trigger refresh locally
                     if (dy > 120 && !triggered && scroller.scrollTop <= 1) {
                         triggered = true;
-                        if (navigator.vibrate) navigator.vibrate(50); // Native vibration confirmation
                         refreshBtn.click(); // Programmatically execute the physical button protocol
                     }
                 }, { passive: true });
