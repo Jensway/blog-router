@@ -261,3 +261,22 @@ if (fs.existsSync(mainActivityPath)) {
     }
 }
 
+// -------------------------------------------------------------
+// Inject Gradle Dependency for Native SwipeRefreshLayout
+// -------------------------------------------------------------
+const buildGradlePath = path.join(__dirname, '..', 'android', 'app', 'build.gradle');
+
+if (fs.existsSync(buildGradlePath)) {
+    let buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+
+    if (!buildGradle.includes('androidx.swiperefreshlayout:swiperefreshlayout')) {
+        // Inject into the dependencies block
+        buildGradle = buildGradle.replace(/(dependencies\s*\{)/, `$1\n    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"`);
+        fs.writeFileSync(buildGradlePath, buildGradle, 'utf8');
+        console.log('Successfully injected SwipeRefreshLayout dependency into app/build.gradle');
+    } else {
+        console.log('app/build.gradle already contains SwipeRefreshLayout dependency.');
+    }
+} else {
+    console.error(`ERROR: app/build.gradle not found at ${buildGradlePath}`);
+}
