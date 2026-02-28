@@ -334,15 +334,12 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: var(--bg-body);
             color: var(--text-ui);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
+            font-size: 14px;
+            min-height: 100vh;
             overflow: hidden;
-            overscroll-behavior-y: none;
         }
 
         .app-container {
@@ -1428,16 +1425,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             padding: 20px;
             background: var(--bg-body);
         }
 
-        .spin-anim {
-            animation: spin 1s linear infinite;
-        }
-
-        .login-box {
+        .login-card {
             width: 100%;
             max-width: 360px;
             text-align: center;
@@ -1620,7 +1613,7 @@
 <body class="view-sidebar theme-dark">
 
     <div class="login-container" id="loginPage">
-        <div class="login-box">
+        <div class="login-card">
             <div
                 style="width:60px; height:60px; background:var(--primary); border-radius:16px; margin:0 auto 20px; display:flex; align-items:center; justify-content:center; color:white;">
                 <i data-lucide="book-open" style="width:32px;height:32px;"></i>
@@ -1706,10 +1699,7 @@
                     <button class="mobile-back-btn" id="backToSidebar"><i data-lucide="chevron-left"></i></button>
                     <span id="listTitle">全部日志</span>
                 </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="btn btn-secondary" style="padding:6px 10px;" id="refreshPostsBtn" title="刷新">
-                        <i data-lucide="refresh-cw" style="width:14px;"></i> 刷新
-                    </button>
+                <div style="display:flex;gap:6px;">
                     <label class="btn btn-secondary" style="padding:6px 10px;cursor:pointer;" title="导入网页"
                         id="importBtnGroup">
                         <i data-lucide="globe" style="width:14px;"></i>
@@ -1792,14 +1782,9 @@
         <div class="plaza-container" id="plazaContainer">
             <div class="plaza-header">
                 <button class="mobile-back-btn" id="backFromPlaza"><i data-lucide="chevron-left"></i></button>
-                <div style="display:flex;align-items:center;flex:1;">
-                    <h2 style="font-size:18px;margin:0;display:flex;align-items:center;">
-                        <i data-lucide="message-circle" style="width:20px;margin-right:8px;"></i>消息广场
-                    </h2>
-                </div>
-                <button class="btn btn-secondary" style="padding:6px 10px;" id="refreshPlazaBtn" title="刷新">
-                    <i data-lucide="refresh-cw" style="width:14px;"></i> 刷新
-                </button>
+                <h2 style="font-size:18px;">
+                    <i data-lucide="message-circle" style="width:20px;margin-right:8px;"></i>消息广场
+                </h2>
             </div>
             <div class="plaza-messages" id="plazaMessages"></div>
             <div class="plaza-input-area">
@@ -2208,89 +2193,35 @@
             }
 
             function checkSession() {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    document.getElementById('loginPage').style.display = 'none';
-                    document.getElementById('appPage').style.display = 'flex';
-                    if (window.innerWidth <= 768) {
-                        setMobileView('plaza');
+                api('/api/session').then(d => {
+                    if (d.logged_in) {
+                        window.sessionToken = d.token || '';
+                        currentUser = d.username;
+                        isAdmin = d.is_admin;
+                        $('userName').textContent = d.username;
+                        $('userRole').textContent = isAdmin ? '管理员' : '用户';
+                        $('userAvatar').textContent = d.username[0].toUpperCase();
+                        $('loginPage').style.display = 'none';
+                        $('appPage').style.display = 'flex';
+                        if (isAdmin) $('adminArea').style.display = 'block';
+                        loadData();
+                        connectWS();
+                        tryLanRedirect(); // 检测局域网/ZeroTier直连
+                        lucide.createIcons();
+                        changeTheme(localStorage.getItem('editorTheme') || 'vscode-dark');
+
+                        // 默认进广场
+                        showView('plaza');
+                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                        const plazaNav = Array.from(document.querySelectorAll('.nav-item')).find(n => n.querySelector('span')?.textContent === '消息广场');
+                        if (plazaNav) plazaNav.classList.add('active');
+
+                        if (window.innerWidth > 768) document.body.classList.remove('view-sidebar');
                     } else {
-                        document.body.classList.remove('view-sidebar');
+                        $('loginPage').style.display = 'flex';
                     }
-                    loadData();
-                    connectWS();
-                    tryLanRedirect(); // 检测局域网/ZeroTier直连
-                    lucide.createIcons();
-                    changeTheme(localStorage.getItem('editorTheme') || 'vscode-dark');
-
-                    // 默认进广场
-                    showView('plaza');
-                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                    const plazaNav = Array.from(document.querySelectorAll('.nav-item')).find(n => n.querySelector('span')?.textContent === '消息广场');
-                    if (plazaNav) plazaNav.classList.add('active');
-
-                    setTimeout(() => {
-                        initTripwirePTR('postList', 'refreshPostsBtn');
-                        initTripwirePTR('plazaMessages', 'refreshPlazaBtn');
-                    }, 500);
-                } else {
-                    document.getElementById('loginPage').style.display = 'flex';
-                }
+                }).catch(() => $('loginPage').style.display = 'flex');
             }
-
-            function initTripwirePTR(containerId, refreshBtnId) {
-                const scroller = document.getElementById(containerId);
-                const refreshBtn = document.getElementById(refreshBtnId);
-                if (!scroller || !refreshBtn) return;
-
-                let startY = 0;
-                let isPulling = false;
-                let triggered = false;
-
-                // Use PASSIVE listeners to guarantee the system retains native scrolling & edge-stretch effects
-                scroller.addEventListener('touchstart', (e) => {
-                    if (scroller.scrollTop <= 1) {
-                        startY = e.touches[0].clientY;
-                        isPulling = true;
-                        triggered = false;
-                    }
-                }, { passive: true });
-
-                scroller.addEventListener('touchmove', (e) => {
-                    if (!isPulling) return;
-                    let dy = e.touches[0].clientY - startY;
-
-                    // If pulled down 120px from top without lifting finger, trigger refresh locally
-                    if (dy > 120 && !triggered && scroller.scrollTop <= 1) {
-                        triggered = true;
-                        refreshBtn.click(); // Programmatically execute the physical button protocol
-                    }
-                }, { passive: true });
-
-                scroller.addEventListener('touchend', () => {
-                    isPulling = false;
-                }, { passive: true });
-            }
-
-            document.getElementById('refreshPostsBtn').addEventListener('click', async (e) => {
-                const icon = e.currentTarget.querySelector('svg');
-                if (icon) icon.classList.add('spin-anim');
-                try {
-                    await loadData(); // Reloads categories, tags, and posts
-                } finally {
-                    setTimeout(() => { if (icon) icon.classList.remove('spin-anim'); }, 500);
-                }
-            });
-
-            document.getElementById('refreshPlazaBtn').addEventListener('click', async (e) => {
-                const icon = e.currentTarget.querySelector('svg');
-                if (icon) icon.classList.add('spin-anim');
-                try {
-                    await loadMessages();
-                } finally {
-                    setTimeout(() => { if (icon) icon.classList.remove('spin-anim'); }, 500);
-                }
-            });
 
             let selectedCategory = ''; // 当前编辑器选中的分类名
             let allTags = []; // [{name, count}]
@@ -2658,14 +2589,6 @@
                         const url = apiBase + '/api/file/' + cleanFileName;
                         const fileName = escapeHtml(m.file_name || 'file');
 
-                        let secureDownloadApiBase = apiBase;
-                        let secureDownloadUrl = url;
-                        // Prevent Chromium "Mixed Content Download" blocks by falling back to the secure origin
-                        if (window.location.protocol === 'https:' && apiBase.startsWith('http://')) {
-                            secureDownloadApiBase = '';
-                            secureDownloadUrl = '/api/file/' + cleanFileName;
-                        }
-
                         if (m.file_type === 'image') {
                             fileHtml = `<div class="plaza-msg-file">
                         <img src="${url}" onclick="window.open('${url}')" 
@@ -2683,14 +2606,14 @@
                             // 其他文件类型显示下载链接
                             fileHtml = `<div class="plaza-msg-file" style="margin-top:8px; padding:8px; background:var(--bg-hover); border-radius:6px;">
                         <i data-lucide="file" style="width:14px; margin-right:6px;"></i>
-                        <a href="${secureDownloadUrl}" target="_blank" style="color:var(--primary); text-decoration:none;">
+                        <a href="${url}" target="_blank" style="color:var(--primary); text-decoration:none;">
                             ${fileName}
                         </a>
                     </div>`;
                         }
 
-                        // Use pseudo-directory appending trick for dumb mobile webkit browsers to bypass Content-Disposition limitations
-                        downloadBtn = `<a href="${secureDownloadApiBase}/api/file/${cleanFileName}/${encodeURIComponent(fileName)}?download=${encodeURIComponent(fileName)}" download="${fileName}" title="下载" class="plaza-msg-action" style="display:inline-flex;color:inherit;text-decoration:none;"><i data-lucide="download" style="width:14px;"></i></a>`;
+                        downloadBtn = `<i data-lucide="download" class="plaza-msg-action" style="width:14px;" 
+                    onclick="downloadFile('${apiBase}/api/file/${cleanFileName}','${fileName}')" title="下载"></i>`;
                     }
 
                     const canDelete = m.username === currentUser || isAdmin;
@@ -2716,12 +2639,12 @@
 
                 if (prepend) {
                     container.insertAdjacentHTML('afterbegin', html);
-                    // 滚动到新消息 (顶部)
+                    // 滚动到新消息
                     container.scrollTop = 0;
                 } else {
                     container.innerHTML = html;
-                    // 初始化加载滚动到顶部（最新消息）
-                    setTimeout(() => container.scrollTop = 0, 100);
+                    // 滚动到底部
+                    setTimeout(() => container.scrollTop = container.scrollHeight, 100);
                 }
 
                 lucide.createIcons();
@@ -3446,6 +3369,27 @@
 
             lucide.createIcons();
             checkSession();
+
+            // === Phase 59: Capacitor Android SwipeRefreshLayout Bridge ===
+            window.addEventListener('nativeSwipeRefresh', async () => {
+                if (navigator.vibrate) navigator.vibrate(20);
+
+                // If on message square, load messages. Else load posts.
+                const plazaActive = document.querySelector('.nav-item.active span')?.textContent === '消息广场';
+                try {
+                    if (plazaActive) {
+                        await loadMessages(); // Refresh message feed
+                    } else {
+                        await loadData(); // Refresh post list
+                    }
+                } finally {
+                    // Turn off the native java spinner via JS bridge
+                    if (window.Capacitor && window.Capacitor.platform === 'android') {
+                        // The spinner is auto-stopped natively after 1000ms by our injection in Java 
+                        // as a highly stable auto-timeout fallback, so we don't strictly need a PluginMethod here.
+                    }
+                }
+            });
         })();
     </script>
 </body>
