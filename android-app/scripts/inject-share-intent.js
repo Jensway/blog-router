@@ -66,7 +66,23 @@ if (fs.existsSync(mainActivityPath)) {
             }
             call.resolve(ret);
         }
+
+        @com.getcapacitor.PluginMethod
+        public void setSwipeState(com.getcapacitor.PluginCall call) {
+            final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", true));
+            if (MainActivity.swipeRefreshLayoutInstance != null) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.swipeRefreshLayoutInstance.setEnabled(enabled);
+                    }
+                });
+            }
+            call.resolve();
+        }
     }
+
+    public static androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayoutInstance = null;
 
     @Override
     public void onCreate(android.os.Bundle savedInstanceState) {
@@ -76,6 +92,8 @@ if (fs.existsSync(mainActivityPath)) {
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
             androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
+            swipeRefreshLayoutInstance = swipeRefreshLayout;
+
             android.view.ViewGroup.LayoutParams matchParent = new android.view.ViewGroup.LayoutParams(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -108,20 +126,14 @@ if (fs.existsSync(mainActivityPath)) {
                         }, 1000);
                     }
                 });
-
-                // Prevent SwipeRefreshLayout from hijacking horizontal scrolls or deep scrolls
-                // Because Vue Single Page Apps often scroll inside inner DIVs (overflow-y: auto)
-                // webView.getScrollY() is always 0. We must ask JS if we are at the top.
+                
+                // Fallback for document body scrolling if applicable, but we now rely on Vue explicit toggles
                 webView.getViewTreeObserver().addOnScrollChangedListener(new android.view.ViewTreeObserver.OnScrollChangedListener() {
                     @Override
                     public void onScrollChanged() {
-                        webView.evaluateJavascript("window.isAtTopForPTR === true || window.isAtTopForPTR === undefined", new android.webkit.ValueCallback<String>() {
-                            @Override
-                            public void onReceiveValue(String value) {
-                                boolean isAtTop = "true".equals(value);
-                                swipeRefreshLayout.setEnabled(isAtTop && webView.getScrollY() == 0);
-                            }
-                        });
+                        if (webView.getScrollY() > 5) {
+                            swipeRefreshLayout.setEnabled(false);
+                        }
                     }
                 });
             }
