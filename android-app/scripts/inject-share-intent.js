@@ -110,14 +110,18 @@ if (fs.existsSync(mainActivityPath)) {
                 });
 
                 // Prevent SwipeRefreshLayout from hijacking horizontal scrolls or deep scrolls
+                // Because Vue Single Page Apps often scroll inside inner DIVs (overflow-y: auto)
+                // webView.getScrollY() is always 0. We must ask JS if we are at the top.
                 webView.getViewTreeObserver().addOnScrollChangedListener(new android.view.ViewTreeObserver.OnScrollChangedListener() {
                     @Override
                     public void onScrollChanged() {
-                        if (webView.getScrollY() == 0) {
-                            swipeRefreshLayout.setEnabled(true);
-                        } else {
-                            swipeRefreshLayout.setEnabled(false);
-                        }
+                        webView.evaluateJavascript("window.isAtTopForPTR === true || window.isAtTopForPTR === undefined", new android.webkit.ValueCallback<String>() {
+                            @Override
+                            public void onReceiveValue(String value) {
+                                boolean isAtTop = "true".equals(value);
+                                swipeRefreshLayout.setEnabled(isAtTop && webView.getScrollY() == 0);
+                            }
+                        });
                     }
                 });
             }

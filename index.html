@@ -3390,6 +3390,18 @@
                     }
                 }
             });
+
+            // === Phase 60: Prevent Android Native SwipeRefreshLayout from intercepting inner DIV scrolling ===
+            window.isAtTopForPTR = true;
+            document.addEventListener('scroll', (e) => {
+                const target = e.target;
+                if (target && target.scrollTop !== undefined) {
+                    // Only care about the scroll position of the main lists
+                    if (target.id === 'postList' || target.id === 'plazaMessages' || target === document.documentElement || target === document.body) {
+                        window.isAtTopForPTR = (target.scrollTop <= 1);
+                    }
+                }
+            }, true); // Use capture phase to catch all internal DIV scrolls natively
         })();
     </script>
 </body>
