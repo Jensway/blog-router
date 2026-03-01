@@ -66,23 +66,7 @@ if (fs.existsSync(mainActivityPath)) {
             }
             call.resolve(ret);
         }
-
-        @com.getcapacitor.PluginMethod
-        public void setSwipeState(com.getcapacitor.PluginCall call) {
-            final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", true));
-            if (MainActivity.swipeRefreshLayoutInstance != null) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.swipeRefreshLayoutInstance.setEnabled(enabled);
-                    }
-                });
-            }
-            call.resolve();
-        }
     }
-
-    public static androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayoutInstance = null;
 
     @Override
     public void onCreate(android.os.Bundle savedInstanceState) {
@@ -92,46 +76,13 @@ if (fs.existsSync(mainActivityPath)) {
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
             androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
-            swipeRefreshLayoutInstance = swipeRefreshLayout;
-
-            android.view.ViewGroup.LayoutParams matchParent = new android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-            );
-            swipeRefreshLayout.setLayoutParams(matchParent);
-            
-            // Customize Android Native Spinner Colors
-            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#4f46e5")); // Primary Color
-
-            android.webkit.WebView webView = bridge.getWebView();
-            android.view.ViewGroup parent = (android.view.ViewGroup) webView.getParent();
-            
-            if (parent != null) {
-                parent.removeView(webView);
-                swipeRefreshLayout.addView(webView, matchParent);
-                parent.addView(swipeRefreshLayout, matchParent);
-
-                swipeRefreshLayout.setOnRefreshListener(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener() {
-                    @Override
-                    public void onRefresh() {
-                        // Dispatch native event to Vue JS
-                        bridge.getWebView().evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeSwipeRefresh'));", null);
-                        
-                        // Stop spinner after 1000ms natively (fallback) or by JS clearing it later
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                swipeRefreshLayout.setRefreshing(false);
-                            }
-                        }, 1000);
-                    }
-                });
-                
-                // Fallback for document body scrolling if applicable, but we now rely on Vue explicit toggles
+                // Prevent SwipeRefreshLayout from hijacking horizontal scrolls or deep scrolls
                 webView.getViewTreeObserver().addOnScrollChangedListener(new android.view.ViewTreeObserver.OnScrollChangedListener() {
                     @Override
                     public void onScrollChanged() {
-                        if (webView.getScrollY() > 5) {
+                        if (webView.getScrollY() == 0) {
+                            swipeRefreshLayout.setEnabled(true);
+                        } else {
                             swipeRefreshLayout.setEnabled(false);
                         }
                     }
