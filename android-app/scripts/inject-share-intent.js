@@ -75,6 +75,7 @@ if (fs.existsSync(mainActivityPath)) {
 
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
+            android.webkit.WebView webView = bridge.getWebView();
             androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
             android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
             webViewParent.removeView(webView);
