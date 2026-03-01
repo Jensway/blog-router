@@ -72,25 +72,6 @@ if (fs.existsSync(mainActivityPath)) {
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(NativeShareProxy.class);
         super.onCreate(savedInstanceState);
-
-        // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
-        try {
-            androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
-                // Prevent SwipeRefreshLayout from hijacking horizontal scrolls or deep scrolls
-                webView.getViewTreeObserver().addOnScrollChangedListener(new android.view.ViewTreeObserver.OnScrollChangedListener() {
-                    @Override
-                    public void onScrollChanged() {
-                        if (webView.getScrollY() == 0) {
-                            swipeRefreshLayout.setEnabled(true);
-                        } else {
-                            swipeRefreshLayout.setEnabled(false);
-                        }
-                    }
-                });
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
