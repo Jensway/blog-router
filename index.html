@@ -3379,19 +3379,18 @@
                 }
             });
 
-            // Native Android SwipeRefreshLayout Lock Prevention
+            // Native Android SwipeRefreshLayout scroll-aware lock
+            // The scroll event updates a Java-side boolean BEFORE the next touch,
+            // so canChildScrollUp() already has the correct state when SwipeRefreshLayout checks.
             function initNativePtrLock(containerId) {
                 const container = document.getElementById(containerId);
                 if (!container) return;
 
-                const checkLock = () => {
-                    if (window.AppAndroidJS && window.AppAndroidJS.setPtrEnabled) {
-                        window.AppAndroidJS.setPtrEnabled(container.scrollTop <= 1);
+                container.addEventListener('scroll', () => {
+                    if (window.NativePTR) {
+                        window.NativePTR.setScrollState(container.scrollTop > 1);
                     }
-                };
-
-                container.addEventListener('scroll', checkLock, { passive: true });
-                container.addEventListener('touchstart', checkLock, { passive: true });
+                }, { passive: true });
             }
             initNativePtrLock('postList');
             initNativePtrLock('plazaMessages');

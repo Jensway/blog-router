@@ -75,35 +75,43 @@ if (fs.existsSync(mainActivityPath)) {
 
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
-            android.webkit.WebView webView = bridge.getWebView();
+            final android.webkit.WebView webView = bridge.getWebView();
             final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
             android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
             webViewParent.removeView(webView);
             swipeRefreshLayout.addView(webView);
             webViewParent.addView(swipeRefreshLayout);
 
+            // Mutable state holder: tracks whether JS reports the active container is scrolled down
+            final boolean[] jsCanScrollUp = new boolean[]{false};
+
+            // Override canChildScrollUp via the official callback API
+            // This is called synchronously inside onInterceptTouchEvent BEFORE the gesture is claimed
+            swipeRefreshLayout.setOnChildScrollUpCallback(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnChildScrollUpCallback() {
+                @Override
+                public boolean canChildScrollUp(androidx.swiperefreshlayout.widget.SwipeRefreshLayout parent, android.view.View child) {
+                    return jsCanScrollUp[0];
+                }
+            });
+
+            // Expose scroll state setter to JavaScript via a synchronous bridge
+            webView.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void setScrollState(boolean scrolledDown) {
+                    jsCanScrollUp[0] = scrolledDown;
+                }
+            }, "NativePTR");
+
             swipeRefreshLayout.setOnRefreshListener(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener() {
                 @Override
                 public void onRefresh() {
                     webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeSwipeRefresh'));", null);
-                    // Reset UI after short delay, JS handles actual loading
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
                         @Override
                         public void run() { swipeRefreshLayout.setRefreshing(false); }
                     }, 1000);
                 }
             });
-
-            // Allow JS to explicitly lock/unlock PTR since WebView getScrollY() is always 0 for internal CSS scrolls
-            bridge.getWebView().addJavascriptInterface(new Object() {
-                @android.webkit.JavascriptInterface
-                public void setPtrEnabled(boolean enabled) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() { swipeRefreshLayout.setEnabled(enabled); }
-                    });
-                }
-            }, "AppAndroidJS");
 
         } catch (Exception e) { e.printStackTrace(); }
     }
