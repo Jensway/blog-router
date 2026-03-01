@@ -76,7 +76,7 @@ if (fs.existsSync(mainActivityPath)) {
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
             android.webkit.WebView webView = bridge.getWebView();
-            androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
+            final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
             android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
             webViewParent.removeView(webView);
             swipeRefreshLayout.addView(webView);
@@ -94,17 +94,17 @@ if (fs.existsSync(mainActivityPath)) {
                 }
             });
 
-            // Prevent SwipeRefreshLayout from hijacking horizontal scrolls or deep scrolls
-            webView.getViewTreeObserver().addOnScrollChangedListener(new android.view.ViewTreeObserver.OnScrollChangedListener() {
-                @Override
-                public void onScrollChanged() {
-                    if (webView.getScrollY() == 0) {
-                        swipeRefreshLayout.setEnabled(true);
-                    } else {
-                        swipeRefreshLayout.setEnabled(false);
-                    }
+            // Allow JS to explicitly lock/unlock PTR since WebView getScrollY() is always 0 for internal CSS scrolls
+            bridge.getWebView().addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void setPtrEnabled(boolean enabled) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() { swipeRefreshLayout.setEnabled(enabled); }
+                    });
                 }
-            });
+            }, "AppAndroidJS");
+
         } catch (Exception e) { e.printStackTrace(); }
     }
 

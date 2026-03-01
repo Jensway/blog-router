@@ -3379,6 +3379,23 @@
                 }
             });
 
+            // Native Android SwipeRefreshLayout Lock Prevention
+            function initNativePtrLock(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const checkLock = () => {
+                    if (window.AppAndroidJS && window.AppAndroidJS.setPtrEnabled) {
+                        window.AppAndroidJS.setPtrEnabled(container.scrollTop <= 1);
+                    }
+                };
+
+                container.addEventListener('scroll', checkLock, { passive: true });
+                container.addEventListener('touchstart', checkLock, { passive: true });
+            }
+            initNativePtrLock('postList');
+            initNativePtrLock('plazaMessages');
+
             lucide.createIcons();
             checkSession();
         })();
