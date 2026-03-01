@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted, onUnmounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, setConfig } from '../api'
 
@@ -64,7 +64,18 @@ const toast = inject('toast')
 const posts = ref([])
 const loading = ref(true)
 const error = ref('')
-const currentTab = ref('active') // 'active' or 'trash'
+const currentTab = ref('active')
+
+// Sync scroll state with native SwipeRefreshLayout
+function syncScrollState() {
+  if (window.NativePTR) {
+    window.NativePTR.setScrollState(window.scrollY > 1)
+  }
+}
+
+function onNativeRefresh() {
+  load()
+}
 
 async function load() {
   loading.value = true
@@ -111,7 +122,21 @@ function goNewPost() {
   router.push('/posts/new')
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  // Enable native PTR by syncing scroll position
+  window.addEventListener('scroll', syncScrollState, { passive: true })
+  window.addEventListener('nativeSwipeRefresh', onNativeRefresh)
+  // Initial state: at top, so enable PTR
+  if (window.NativePTR) window.NativePTR.setScrollState(false)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', syncScrollState)
+  window.removeEventListener('nativeSwipeRefresh', onNativeRefresh)
+  // Disable PTR when leaving this page
+  if (window.NativePTR) window.NativePTR.setScrollState(true)
+})
 </script>
 
 <style scoped>

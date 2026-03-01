@@ -1,6 +1,6 @@
 <template>
   <div class="page has-bottom-nav">
-    <div class="messages-container">
+    <div class="messages-container" ref="msgContainer">
       <div v-if="loading" class="state-box">
         <div class="loader"></div>
         <p>加载中…</p>
@@ -347,15 +347,42 @@ async function send() {
   }
 }
 
+// Sync scroll state with native SwipeRefreshLayout
+function syncScrollState() {
+  const el = msgContainer.value
+  if (window.NativePTR && el) {
+    window.NativePTR.setScrollState(el.scrollTop > 1)
+  }
+}
+
+function onNativeRefresh() {
+  load()
+}
+
 onMounted(() => {
   load()
   window.addEventListener('reloadMessagesIntent', load)
+  window.addEventListener('nativeSwipeRefresh', onNativeRefresh)
+  // Sync scroll on the container
+  setTimeout(() => {
+    const el = msgContainer.value
+    if (el) el.addEventListener('scroll', syncScrollState, { passive: true })
+    // Initial state: at top, enable PTR
+    if (window.NativePTR) window.NativePTR.setScrollState(false)
+  }, 100)
 })
 
-onActivated(load)
+onActivated(() => {
+  load()
+  // Re-enable PTR when returning to this page
+  if (window.NativePTR) window.NativePTR.setScrollState(false)
+})
 
 onUnmounted(() => {
   window.removeEventListener('reloadMessagesIntent', load)
+  window.removeEventListener('nativeSwipeRefresh', onNativeRefresh)
+  // Disable PTR when leaving
+  if (window.NativePTR) window.NativePTR.setScrollState(true)
 })
 </script>
 
@@ -371,7 +398,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 16px 0 120px; /* Removed side padding here, added to children. Added 120px bottom padding to clear input box */
+  padding: 16px 0 120px;
   overflow-x: hidden;
 }
 
