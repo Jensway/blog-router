@@ -73,46 +73,10 @@ if (fs.existsSync(mainActivityPath)) {
         registerPlugin(NativeShareProxy.class);
         super.onCreate(savedInstanceState);
 
-        // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
+        // Disable native Android overscroll so JS touch handlers can control pull-to-refresh
         try {
-            final android.webkit.WebView webView = bridge.getWebView();
-
-            // Mutable state holder: tracks whether JS reports the active container is scrolled down
-            final boolean[] jsCanScrollUp = new boolean[]{false};
-
-            // Anonymous subclass: directly override canChildScrollUp() — works on ALL library versions
-            final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout =
-                new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this) {
-                    @Override
-                    public boolean canChildScrollUp() {
-                        return jsCanScrollUp[0];
-                    }
-                };
-
-            android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
-            webViewParent.removeView(webView);
-            swipeRefreshLayout.addView(webView);
-            webViewParent.addView(swipeRefreshLayout);
-
-            // Expose scroll state setter to JavaScript via a synchronous bridge
-            webView.addJavascriptInterface(new Object() {
-                @android.webkit.JavascriptInterface
-                public void setScrollState(boolean scrolledDown) {
-                    jsCanScrollUp[0] = scrolledDown;
-                }
-            }, "NativePTR");
-
-            swipeRefreshLayout.setOnRefreshListener(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener() {
-                @Override
-                public void onRefresh() {
-                    webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeSwipeRefresh'));", null);
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
-                        @Override
-                        public void run() { swipeRefreshLayout.setRefreshing(false); }
-                    }, 1000);
-                }
-            });
-
+            android.webkit.WebView webView = bridge.getWebView();
+            webView.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
         } catch (Exception e) { e.printStackTrace(); }
     }
 
