@@ -1,11 +1,12 @@
 <template>
   <div class="page has-bottom-nav">
+    <!-- Pull-to-Refresh Indicator (Moved OUTSIDE the scroll container to prevent clipping) -->
+    <div class="ptr-indicator" ref="ptrIndicator">
+      <div class="ptr-spinner"></div>
+      <span class="ptr-text">下拉刷新</span>
+    </div>
+
     <div class="messages-container" ref="msgContainer">
-      <!-- Pull-to-Refresh Indicator -->
-      <div class="ptr-indicator" ref="ptrIndicator">
-        <div class="ptr-spinner"></div>
-        <span class="ptr-text">下拉刷新</span>
-      </div>
 
       <div v-if="loading && !ptrRefreshing" class="state-box">
         <div class="loader"></div>
@@ -447,21 +448,10 @@ onUnmounted(() => {
   background-color: var(--light);
 }
 
-.messages-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  padding: 16px 0 120px;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
-  position: relative;
-}
-
 /* PTR Indicator */
 .ptr-indicator {
   position: absolute;
-  top: -50px;
+  top: 16px; /* Positioned slightly below header/top edge */
   left: 0;
   right: 0;
   height: 50px;
@@ -472,6 +462,19 @@ onUnmounted(() => {
   font-size: 13px;
   opacity: 0;
   pointer-events: none;
+  z-index: 1; /* Below the container initially */
+}
+.messages-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px 0 120px;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  position: relative;
+  z-index: 2; /* Sits above the indicator, slides down to reveal it */
+  background: var(--light); /* Ensure it covers the indicator when not pulled */
 }
 .ptr-spinner {
   width: 18px;
