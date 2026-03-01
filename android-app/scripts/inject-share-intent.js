@@ -73,47 +73,10 @@ if (fs.existsSync(mainActivityPath)) {
         registerPlugin(NativeShareProxy.class);
         super.onCreate(savedInstanceState);
 
-        // Native Android SwipeRefreshLayout with JS-synced scroll detection
+        // Disable native Android overscroll so Vue touch handlers can control pull-to-refresh
         try {
-            final android.webkit.WebView webView = bridge.getWebView();
+            android.webkit.WebView webView = bridge.getWebView();
             webView.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
-
-            // Mutable state: JS updates this to tell native whether the content is scrolled down
-            final boolean[] jsCanScrollUp = new boolean[]{true}; // Default: disabled (safe)
-
-            // Anonymous subclass to override canChildScrollUp() directly
-            final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout =
-                new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this) {
-                    @Override
-                    public boolean canChildScrollUp() {
-                        return jsCanScrollUp[0];
-                    }
-                };
-
-            android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
-            webViewParent.removeView(webView);
-            swipeRefreshLayout.addView(webView);
-            webViewParent.addView(swipeRefreshLayout);
-
-            // Expose to JS: window.NativePTR.setScrollState(boolean)
-            webView.addJavascriptInterface(new Object() {
-                @android.webkit.JavascriptInterface
-                public void setScrollState(boolean scrolledDown) {
-                    jsCanScrollUp[0] = scrolledDown;
-                }
-            }, "NativePTR");
-
-            swipeRefreshLayout.setOnRefreshListener(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener() {
-                @Override
-                public void onRefresh() {
-                    webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('nativeSwipeRefresh'));", null);
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
-                        @Override
-                        public void run() { swipeRefreshLayout.setRefreshing(false); }
-                    }, 1500);
-                }
-            });
-
         } catch (Exception e) { e.printStackTrace(); }
     }
 

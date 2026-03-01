@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="page" ref="pageEl">
     <header class="header blur-header">
       <div class="tabs">
         <div class="tab-indicator" :style="{ 
@@ -12,8 +12,14 @@
       </div>
     </header>
 
-    <div class="content-area">
-      <div v-if="loading" class="state-box">
+    <div class="content-area" ref="contentArea">
+      <!-- Pull-to-Refresh Indicator -->
+      <div class="ptr-indicator" ref="ptrIndicator">
+        <div class="ptr-spinner"></div>
+        <span class="ptr-text">下拉刷新</span>
+      </div>
+
+      <div v-if="loading && !ptrRefreshing" class="state-box">
         <div class="loader"></div>
         <p>加载中…</p>
       </div>
@@ -66,15 +72,79 @@ const loading = ref(true)
 const error = ref('')
 const currentTab = ref('active')
 
-// Sync scroll state with native SwipeRefreshLayout
-function syncScrollState() {
-  if (window.NativePTR) {
-    window.NativePTR.setScrollState(window.scrollY > 1)
-  }
-}
+// Pure Vue Pull-to-Refresh State
+const pageEl = ref(null)
+const contentArea = ref(null)
+const ptrIndicator = ref(null)
+const ptrRefreshing = ref(false)
+let ptrStartY = 0, ptrPulling = false, ptrDy = 0
 
-function onNativeRefresh() {
-  load()
+function initPTR() {
+  const el = contentArea.value
+  if (!el) return
+
+  el.addEventListener('touchstart', (e) => {
+    // Only allow PTR when scrolled to the very top of the page
+    if (window.scrollY <= 0 && el.scrollTop <= 0 && !ptrRefreshing.value) {
+      ptrStartY = e.touches[0].clientY
+      ptrPulling = true
+      ptrDy = 0
+      el.style.transition = 'none'
+    }
+  }, { passive: true })
+
+  el.addEventListener('touchmove', (e) => {
+    if (!ptrPulling) return
+    ptrDy = e.touches[0].clientY - ptrStartY
+    if (ptrDy < 0) { ptrPulling = false; return }
+    if (e.cancelable) e.preventDefault()
+
+    const pull = Math.min(ptrDy * 0.4, 80)
+    el.style.transform = 'translateY(' + pull + 'px)'
+    const ind = ptrIndicator.value
+    if (ind) {
+      ind.style.opacity = Math.min(pull / 40, 1)
+      if (pull >= 50) {
+        ind.classList.add('ready')
+        ind.querySelector('.ptr-text').textContent = '释放刷新'
+      } else {
+        ind.classList.remove('ready')
+        ind.querySelector('.ptr-text').textContent = '下拉刷新'
+      }
+    }
+  }, { passive: false })
+
+  el.addEventListener('touchend', () => {
+    if (!ptrPulling) return
+    ptrPulling = false
+    const pull = Math.min(ptrDy * 0.4, 80)
+    el.style.transition = 'transform 0.3s ease'
+
+    if (pull >= 50) {
+      el.style.transform = 'translateY(50px)'
+      const ind = ptrIndicator.value
+      if (ind) ind.querySelector('.ptr-text').textContent = '刷新中...'
+      if (navigator.vibrate) navigator.vibrate(10)
+      ptrRefreshing.value = true
+      Promise.resolve(load()).finally(() => {
+        el.style.transform = 'translateY(0)'
+        window.scrollTo({ top: 0, behavior: 'smooth' }) // Scroll to top exactly as requested
+        if (ind) {
+          ind.style.opacity = '0'
+          ind.classList.remove('ready')
+          ind.querySelector('.ptr-text').textContent = '下拉刷新'
+        }
+        ptrRefreshing.value = false
+      })
+    } else {
+      el.style.transform = 'translateY(0)'
+      const ind = ptrIndicator.value
+      if (ind) {
+        ind.style.opacity = '0'
+        ind.classList.remove('ready')
+      }
+    }
+  }, { passive: true })
 }
 
 async function load() {
@@ -124,18 +194,10 @@ function goNewPost() {
 
 onMounted(() => {
   load()
-  // Enable native PTR by syncing scroll position
-  window.addEventListener('scroll', syncScrollState, { passive: true })
-  window.addEventListener('nativeSwipeRefresh', onNativeRefresh)
-  // Initial state: at top, so enable PTR
-  if (window.NativePTR) window.NativePTR.setScrollState(false)
+  initPTR()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', syncScrollState)
-  window.removeEventListener('nativeSwipeRefresh', onNativeRefresh)
-  // Disable PTR when leaving this page
-  if (window.NativePTR) window.NativePTR.setScrollState(true)
 })
 </script>
 
@@ -144,6 +206,7 @@ onUnmounted(() => {
   position: relative;
   min-height: 100vh;
   background-color: var(--light);
+  overscroll-behavior-y: none;
 }
 
 .blur-header {
@@ -224,7 +287,36 @@ onUnmounted(() => {
 /* List Content */
 .content-area {
   padding: 16px 20px 100px;
+  position: relative;
 }
+
+/* PTR Indicator */
+.ptr-indicator {
+  position: absolute;
+  top: -50px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ptr-spinner {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border: 2px solid var(--gray);
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+.ptr-indicator.ready .ptr-spinner {
+  animation: ptr-spin 0.6s linear infinite;
+}
+@keyframes ptr-spin { 100% { transform: rotate(360deg); } }
 
 .list { list-style: none; }
 .item {

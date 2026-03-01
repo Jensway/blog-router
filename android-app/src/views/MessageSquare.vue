@@ -1,7 +1,13 @@
 <template>
   <div class="page has-bottom-nav">
     <div class="messages-container" ref="msgContainer">
-      <div v-if="loading" class="state-box">
+      <!-- Pull-to-Refresh Indicator -->
+      <div class="ptr-indicator" ref="ptrIndicator">
+        <div class="ptr-spinner"></div>
+        <span class="ptr-text">下拉刷新</span>
+      </div>
+
+      <div v-if="loading && !ptrRefreshing" class="state-box">
         <div class="loader"></div>
         <p>加载中…</p>
       </div>
@@ -347,42 +353,90 @@ async function send() {
   }
 }
 
-// Sync scroll state with native SwipeRefreshLayout
-function syncScrollState() {
-  const el = msgContainer.value
-  if (window.NativePTR && el) {
-    window.NativePTR.setScrollState(el.scrollTop > 1)
-  }
-}
+// Pure Vue Pull-to-Refresh State
+const msgContainer = ref(null)
+const ptrIndicator = ref(null)
+const ptrRefreshing = ref(false)
+let ptrStartY = 0, ptrPulling = false, ptrDy = 0
 
-function onNativeRefresh() {
-  load()
+function initPTR() {
+  const el = msgContainer.value
+  if (!el) return
+
+  el.addEventListener('touchstart', (e) => {
+    // Only allow PTR when scrolled to the very top of the list
+    if (el.scrollTop <= 0 && !ptrRefreshing.value) {
+      ptrStartY = e.touches[0].clientY
+      ptrPulling = true
+      ptrDy = 0
+      el.style.transition = 'none'
+    }
+  }, { passive: true })
+
+  el.addEventListener('touchmove', (e) => {
+    if (!ptrPulling) return
+    ptrDy = e.touches[0].clientY - ptrStartY
+    if (ptrDy < 0) { ptrPulling = false; return }
+    if (e.cancelable) e.preventDefault()
+
+    const pull = Math.min(ptrDy * 0.4, 80)
+    el.style.transform = 'translateY(' + pull + 'px)'
+    const ind = ptrIndicator.value
+    if (ind) {
+      ind.style.opacity = Math.min(pull / 40, 1)
+      if (pull >= 50) {
+        ind.classList.add('ready')
+        ind.querySelector('.ptr-text').textContent = '释放刷新'
+      } else {
+        ind.classList.remove('ready')
+        ind.querySelector('.ptr-text').textContent = '下拉刷新'
+      }
+    }
+  }, { passive: false })
+
+  el.addEventListener('touchend', () => {
+    if (!ptrPulling) return
+    ptrPulling = false
+    const pull = Math.min(ptrDy * 0.4, 80)
+    el.style.transition = 'transform 0.3s ease'
+
+    if (pull >= 50) {
+      el.style.transform = 'translateY(50px)'
+      const ind = ptrIndicator.value
+      if (ind) ind.querySelector('.ptr-text').textContent = '刷新中...'
+      if (navigator.vibrate) navigator.vibrate(10)
+      ptrRefreshing.value = true
+      Promise.resolve(load()).finally(() => {
+        el.style.transform = 'translateY(0)'
+        el.scrollTo({ top: 0, behavior: 'smooth' }) // Ensure it jumps to the top list element
+        if (ind) {
+          ind.style.opacity = '0'
+          ind.classList.remove('ready')
+          ind.querySelector('.ptr-text').textContent = '下拉刷新'
+        }
+        ptrRefreshing.value = false
+      })
+    } else {
+      el.style.transform = 'translateY(0)'
+      const ind = ptrIndicator.value
+      if (ind) {
+        ind.style.opacity = '0'
+        ind.classList.remove('ready')
+      }
+    }
+  }, { passive: true })
 }
 
 onMounted(() => {
   load()
   window.addEventListener('reloadMessagesIntent', load)
-  window.addEventListener('nativeSwipeRefresh', onNativeRefresh)
-  // Sync scroll on the container
-  setTimeout(() => {
-    const el = msgContainer.value
-    if (el) el.addEventListener('scroll', syncScrollState, { passive: true })
-    // Initial state: at top, enable PTR
-    if (window.NativePTR) window.NativePTR.setScrollState(false)
-  }, 100)
+  initPTR()
 })
 
-onActivated(() => {
-  load()
-  // Re-enable PTR when returning to this page
-  if (window.NativePTR) window.NativePTR.setScrollState(false)
-})
+onActivated(load)
 
 onUnmounted(() => {
   window.removeEventListener('reloadMessagesIntent', load)
-  window.removeEventListener('nativeSwipeRefresh', onNativeRefresh)
-  // Disable PTR when leaving
-  if (window.NativePTR) window.NativePTR.setScrollState(true)
 })
 </script>
 
@@ -400,7 +454,37 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 16px 0 120px;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
+  position: relative;
 }
+
+/* PTR Indicator */
+.ptr-indicator {
+  position: absolute;
+  top: -50px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ptr-spinner {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border: 2px solid var(--gray);
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+.ptr-indicator.ready .ptr-spinner {
+  animation: ptr-spin-msg 0.6s linear infinite;
+}
+@keyframes ptr-spin-msg { 100% { transform: rotate(360deg); } }
 
 /* Base States */
 .state-box {
