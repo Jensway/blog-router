@@ -3380,20 +3380,33 @@
             });
 
             // Native Android SwipeRefreshLayout scroll-aware lock
-            // The scroll event updates a Java-side boolean BEFORE the next touch,
+            // Uses anonymous subclass canChildScrollUp() override on the Java side.
+            // The scroll event updates a Java-side boolean BEFORE the next touch gesture,
             // so canChildScrollUp() already has the correct state when SwipeRefreshLayout checks.
             function initNativePtrLock(containerId) {
                 const container = document.getElementById(containerId);
                 if (!container) return;
 
-                container.addEventListener('scroll', () => {
+                const syncState = () => {
                     if (window.NativePTR) {
-                        window.NativePTR.setScrollState(container.scrollTop > 1);
+                        const scrolled = container.scrollTop > 1;
+                        window.NativePTR.setScrollState(scrolled);
                     }
-                }, { passive: true });
+                };
+
+                // scroll fires DURING interactions, so the state is stale-proof
+                container.addEventListener('scroll', syncState, { passive: true });
+                // Also sync on touchstart as a safety net for view-switch edge cases
+                container.addEventListener('touchstart', syncState, { passive: true });
+
+                console.log('[PTR] initNativePtrLock bound to', containerId, 'NativePTR available:', !!window.NativePTR);
             }
-            initNativePtrLock('postList');
-            initNativePtrLock('plazaMessages');
+
+            // Delay binding slightly so the NativePTR JavascriptInterface is guaranteed to be registered
+            setTimeout(() => {
+                initNativePtrLock('postList');
+                initNativePtrLock('plazaMessages');
+            }, 500);
 
             lucide.createIcons();
             checkSession();

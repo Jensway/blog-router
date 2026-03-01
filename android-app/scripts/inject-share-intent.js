@@ -76,23 +76,23 @@ if (fs.existsSync(mainActivityPath)) {
         // Inject Native Android SwipeRefreshLayout wrapping the Capacitor WebView
         try {
             final android.webkit.WebView webView = bridge.getWebView();
-            final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
-            android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
-            webViewParent.removeView(webView);
-            swipeRefreshLayout.addView(webView);
-            webViewParent.addView(swipeRefreshLayout);
 
             // Mutable state holder: tracks whether JS reports the active container is scrolled down
             final boolean[] jsCanScrollUp = new boolean[]{false};
 
-            // Override canChildScrollUp via the official callback API
-            // This is called synchronously inside onInterceptTouchEvent BEFORE the gesture is claimed
-            swipeRefreshLayout.setOnChildScrollUpCallback(new androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnChildScrollUpCallback() {
-                @Override
-                public boolean canChildScrollUp(androidx.swiperefreshlayout.widget.SwipeRefreshLayout parent, android.view.View child) {
-                    return jsCanScrollUp[0];
-                }
-            });
+            // Anonymous subclass: directly override canChildScrollUp() — works on ALL library versions
+            final androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout =
+                new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this) {
+                    @Override
+                    public boolean canChildScrollUp() {
+                        return jsCanScrollUp[0];
+                    }
+                };
+
+            android.view.ViewGroup webViewParent = (android.view.ViewGroup) webView.getParent();
+            webViewParent.removeView(webView);
+            swipeRefreshLayout.addView(webView);
+            webViewParent.addView(swipeRefreshLayout);
 
             // Expose scroll state setter to JavaScript via a synchronous bridge
             webView.addJavascriptInterface(new Object() {
