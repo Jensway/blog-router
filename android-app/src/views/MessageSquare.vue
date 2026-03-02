@@ -467,7 +467,10 @@ onUnmounted(() => {
 <style scoped>
 .page { 
   position: relative;
-  min-height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background-color: var(--light);
 }
 
@@ -492,8 +495,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  height: calc(100vh - 120px - env(safe-area-inset-bottom, 0px));
-  padding: 16px 0 0;
+  padding: 16px 0 calc(120px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
