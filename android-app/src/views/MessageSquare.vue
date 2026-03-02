@@ -114,14 +114,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Fullscreen Image Viewer Overlay -->
-    <div v-if="fullscreenImg" class="fullscreen-viewer" @click="closeFullscreen">
-      <div class="viewer-close-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </div>
-      <img :src="fullscreenImg" class="viewer-img" @click.stop />
-    </div>
   </div>
 </template>
 
@@ -146,15 +138,27 @@ const fileInput = ref(null)
 const selectedFile = ref(null)
 const previewUrl = ref('')
 
-// Fullscreen Viewer State
-const fullscreenImg = ref(null)
-
+// Create a temporary image to feed Viewer.js programmatically
 function openFullscreen(url) {
-  fullscreenImg.value = url;
-}
-
-function closeFullscreen() {
-  fullscreenImg.value = null;
+  const img = new Image();
+  img.src = url;
+  const viewer = new window.Viewer(img, {
+    hidden: function () {
+      viewer.destroy();
+    },
+    toolbar: false,
+    navbar: false,
+    button: true, // Show close button in top right
+    title: false,
+    tooltip: false,
+    movable: true,
+    rotatable: false,
+    scalable: false,
+    transition: true,
+    fullscreen: false,
+    keyboard: false
+  });
+  viewer.show();
 }
 
 function autoResize() {
@@ -847,55 +851,6 @@ onUnmounted(() => {
 }
 .ai-send-btn svg {
   margin-left: -2px; /* Visual balance for paper plane arrow */
-}
-
-/* Fullscreen Viewer */
-.fullscreen-viewer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.95);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.2s ease-out;
-}
-.viewer-close-btn {
-  position: absolute;
-  top: max(20px, env(safe-area-inset-top));
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-  z-index: 10000;
-  transition: all 0.2s;
-}
-.viewer-close-btn:active {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(0.9);
-}
-.viewer-img {
-  max-width: 100%;
-  max-height: 100vh;
-  object-fit: contain;
-  animation: zoomIn 0.2s ease-out;
-}
-@keyframes zoomIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .ai-send-btn:not(:disabled):active {
