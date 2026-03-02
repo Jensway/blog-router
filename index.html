@@ -2814,7 +2814,7 @@
 
                 onProgress(100);
                 return {
-                    url: mergeData.url || ('/api/file/' + mergeData.filename),
+                    url: (mergeData.url || ('/api/file/' + mergeData.filename)).replace('/api/file/', ''),
                     filename: mergeData.filename,
                     file_type: getFileType(file.name)
                 };

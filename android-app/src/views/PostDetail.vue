@@ -76,7 +76,8 @@ function rewriteImageSrcs(html) {
       if (lower.startsWith('http') || lower.startsWith('data:') || lower.startsWith('blob:')) return
       
       if (src.includes('/api/file/')) {
-        img.setAttribute('src', encodeURI(fileURL(src)))
+        const cleaned = src.replace(/^.*\/api\/file\//, '')
+        img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
       } else {
         const cleaned = src.replace(/^\.?\//, '')
         img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
