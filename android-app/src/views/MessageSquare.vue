@@ -492,12 +492,21 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 16px 0 calc(160px + var(--safe-bottom));
+  padding: 16px 0 0;
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
   z-index: 2; /* Sits above the indicator, slides down to reveal it */
   background: var(--light); /* Ensure it covers the indicator when not pulled */
+}
+
+/* Force physical scroll clearance to bypass WebKit Flexbox padding collapse bugs */
+.messages-container::after {
+  content: '';
+  display: block;
+  flex-shrink: 0;
+  min-height: calc(160px + var(--safe-bottom));
+  width: 100%;
 }
 .ptr-spinner {
   width: 18px;
