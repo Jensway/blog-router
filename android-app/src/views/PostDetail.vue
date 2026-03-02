@@ -42,6 +42,14 @@
         <div class="content markdown-body" v-html="post.safe_content || post.content || ''"></div>
       </article>
     </div>
+
+    <!-- Fullscreen Image Viewer Overlay -->
+    <div v-if="fullscreenImg" class="fullscreen-viewer" @click="closeFullscreen">
+      <div class="viewer-close-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </div>
+      <img :src="fullscreenImg" class="viewer-img" @click.stop />
+    </div>
   </div>
 </template>
 
@@ -53,10 +61,21 @@ import { api, fileURL, getBaseURL } from '../api'
 const route = useRoute()
 const router = useRouter()
 const toast = inject('toast', () => {})
-const post = ref({})
+const post = ref(null)
 const loading = ref(true)
-const error = ref('')
 const processing = ref(false)
+const error = ref('')
+const fullscreenImg = ref(null)
+
+function openFullscreen(url) {
+  fullscreenImg.value = url;
+}
+
+function closeFullscreen() {
+  fullscreenImg.value = null;
+}
+
+const currentUser = ref(localStorage.getItem('username') || '')
 
 /**
  * 核心：将服务器返回的 HTML 中所有 img src 注入完整的服务器绝对地址 + token
@@ -76,8 +95,7 @@ function rewriteImageSrcs(html) {
       if (lower.startsWith('http') || lower.startsWith('data:') || lower.startsWith('blob:')) return
       
       if (src.includes('/api/file/')) {
-        const cleaned = src.replace(/^.*\/api\/file\//, '')
-        img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
+        img.setAttribute('src', encodeURI(fileURL(src)))
       } else {
         const cleaned = src.replace(/^\.?\//, '')
         img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
@@ -108,8 +126,15 @@ onMounted(async () => {
       
       const images = document.querySelectorAll('.content img')
       images.forEach(async (img) => {
+        // Enforce clickable cursor natively
+        img.style.cursor = 'pointer';
+        
         const curSrc = img.getAttribute('src');
-        if (!curSrc || curSrc.startsWith('blob:') || curSrc.startsWith('data:')) return;
+        if (!curSrc || curSrc.startsWith('blob:') || curSrc.startsWith('data:')) {
+            // Already raw/processed, just bind click
+            img.onclick = () => openFullscreen(img.src);
+            return;
+        }
         
         try {
           // 清洗可能存在的过期 Token 或干扰参数，基于原生 fileURL 重塑无缓存的新地址
@@ -122,7 +147,12 @@ onMounted(async () => {
           const res = await fetch(freshUrl);
           if (res.ok) {
             const blob = await res.blob();
-            img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }));
+            const objectUrl = URL.createObjectURL(new Blob([blob], { type: 'image/png' }));
+            img.src = objectUrl;
+            img.onclick = () => openFullscreen(objectUrl);
+          } else {
+            // Fallback click binding if fetch fails but image renders somehow
+            img.onclick = () => openFullscreen(freshUrl);
           }
         } catch (e) {
           console.error("DOM Img intercept failed", e);
@@ -343,5 +373,54 @@ async function hardDelete() {
   background: #f8fafc;
   padding: 12px 16px;
   border-radius: 0 12px 12px 0;
+}
+
+/* Fullscreen Viewer */
+.fullscreen-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+.viewer-close-btn {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  z-index: 10000;
+  transition: all 0.2s;
+}
+.viewer-close-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.9);
+}
+.viewer-img {
+  max-width: 100%;
+  max-height: 100vh;
+  object-fit: contain;
+  animation: zoomIn 0.2s ease-out;
+}
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

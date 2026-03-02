@@ -32,7 +32,7 @@
               </div>
               <p v-if="m.content" class="msg-content">{{ m.content }}</p>
               <div v-if="m.file_url" class="msg-attachment">
-                <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" />
+                <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" @click="openFullscreen(fileURL('/api/file/' + m.file_url))" />
                 <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
                   <span class="file-icon">📄</span>
                   <span class="file-txt">{{ m.file_name || '附件' }}</span>
@@ -114,6 +114,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Fullscreen Image Viewer Overlay -->
+    <div v-if="fullscreenImg" class="fullscreen-viewer" @click="closeFullscreen">
+      <div class="viewer-close-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </div>
+      <img :src="fullscreenImg" class="viewer-img" @click.stop />
+    </div>
   </div>
 </template>
 
@@ -137,6 +145,17 @@ const textInput = ref(null)
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const previewUrl = ref('')
+
+// Fullscreen Viewer State
+const fullscreenImg = ref(null)
+
+function openFullscreen(url) {
+  fullscreenImg.value = url;
+}
+
+function closeFullscreen() {
+  fullscreenImg.value = null;
+}
 
 function autoResize() {
   if (!textInput.value) return;
@@ -821,9 +840,62 @@ onUnmounted(() => {
 }
 
 .ai-send-btn:disabled {
-  background: #cbd5e1;
-  color: #f8fafc;
-  cursor: not-allowed;
+  background: var(--bg-hover);
+  color: #ccc;
+  border-color: var(--border);
+  box-shadow: none;
+}
+.ai-send-btn svg {
+  margin-left: -2px; /* Visual balance for paper plane arrow */
+}
+
+/* Fullscreen Viewer */
+.fullscreen-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+.viewer-close-btn {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  z-index: 10000;
+  transition: all 0.2s;
+}
+.viewer-close-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.9);
+}
+.viewer-img {
+  max-width: 100%;
+  max-height: 100vh;
+  object-fit: contain;
+  animation: zoomIn 0.2s ease-out;
+}
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .ai-send-btn:not(:disabled):active {

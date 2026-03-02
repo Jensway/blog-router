@@ -65,8 +65,7 @@ function rewriteImageSrcs(html) {
       if (lower.startsWith('http') || lower.startsWith('data:') || lower.startsWith('blob:')) return
       
       if (src.includes('/api/file/')) {
-        const cleaned = src.replace(/^.*\/api\/file\//, '')
-        img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
+        img.setAttribute('src', encodeURI(fileURL(src)))
       } else {
         const cleaned = src.replace(/^\.?\//, '')
         img.setAttribute('src', encodeURI(fileURL('/api/file/' + cleaned)))
@@ -116,8 +115,7 @@ const editorConfig = {
     try {
       const res = await api.uploadFile(blobInfo.blob())
       if (res.url) {
-        const cleaned = res.url.replace(/^.*\/api\/file\//, '')
-        return fileURL('/api/file/' + cleaned)
+        return fileURL('/api/file/' + res.url)
       } else {
         throw new Error('上传返回格式错误')
       }

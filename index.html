@@ -1460,11 +1460,7 @@
         .plaza-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
-            padding-bottom: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            padding: 16px 24px;
         }
 
         .plaza-msg {
@@ -2815,7 +2811,7 @@
 
                 onProgress(100);
                 return {
-                    url: (mergeData.url || ('/api/file/' + mergeData.filename)).replace('/api/file/', ''),
+                    url: mergeData.url || ('/api/file/' + mergeData.filename),
                     filename: mergeData.filename,
                     file_type: getFileType(file.name)
                 };
