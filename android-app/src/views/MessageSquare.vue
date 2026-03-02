@@ -62,9 +62,6 @@
         <div class="empty-icon">💬</div>
         <p>暂无消息，来第一个发言吧！</p>
       </div>
-
-      <!-- Physical DOM Strut to bypass WebKit scroll-height padding collapse bugs -->
-      <div class="bottom-spacer"></div>
     </div>
 
     <!-- Enhanced Bottom Input Area -->
@@ -495,18 +492,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  height: calc(100vh - 120px - env(safe-area-inset-bottom, 0px));
   padding: 16px 0 0;
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
   z-index: 2;
   background: var(--light);
-}
-
-.bottom-spacer {
-  flex-shrink: 0;
-  width: 100%;
-  height: calc(160px + env(safe-area-inset-bottom, 0px));
 }
 .ptr-spinner {
   width: 18px;
