@@ -62,6 +62,9 @@
         <div class="empty-icon">💬</div>
         <p>暂无消息，来第一个发言吧！</p>
       </div>
+
+      <!-- Physical DOM Strut to bypass WebKit scroll-height padding collapse bugs -->
+      <div class="bottom-spacer"></div>
     </div>
 
     <!-- Enhanced Bottom Input Area -->
@@ -496,17 +499,14 @@ onUnmounted(() => {
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
-  z-index: 2; /* Sits above the indicator, slides down to reveal it */
-  background: var(--light); /* Ensure it covers the indicator when not pulled */
+  z-index: 2;
+  background: var(--light);
 }
 
-/* Force physical scroll clearance to bypass WebKit Flexbox padding collapse bugs */
-.messages-container::after {
-  content: '';
-  display: block;
+.bottom-spacer {
   flex-shrink: 0;
-  min-height: calc(160px + var(--safe-bottom));
   width: 100%;
+  height: calc(160px + env(safe-area-inset-bottom, 0px));
 }
 .ptr-spinner {
   width: 18px;
