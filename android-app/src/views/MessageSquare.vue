@@ -469,7 +469,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 16px 0 120px;
+  padding: 16px 0 calc(160px + var(--safe-bottom));
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
@@ -646,7 +646,7 @@ onUnmounted(() => {
   background: linear-gradient(to top, rgba(248, 250, 252, 1) 60%, rgba(248, 250, 252, 0) 100%);
   z-index: 100;
   pointer-events: none; /* Let clicks pass through background */
-  padding-bottom: 24px; /* Increased bottom padding to clear the bottom nav */
+  padding-bottom: calc(24px + var(--safe-bottom)); /* Increased bottom padding to clear the bottom nav */
 }
 
 .send-area.glass-bar {
