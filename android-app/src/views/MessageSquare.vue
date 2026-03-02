@@ -495,7 +495,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 16px 0 calc(120px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 0 calc(128px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   overscroll-behavior-y: none;
   position: relative;
@@ -668,22 +668,17 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 16px 20px calc(16px + var(--safe-bottom));
-  background: linear-gradient(to top, rgba(248, 250, 252, 1) 60%, rgba(248, 250, 252, 0) 100%);
+  background: var(--light);
   z-index: 100;
-  pointer-events: none; /* Let clicks pass through background */
-  padding-bottom: calc(24px + var(--safe-bottom)); /* Increased bottom padding to clear the bottom nav */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+  pointer-events: auto;
 }
 
 .send-area.glass-bar {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 24px;
-  padding: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-  border: 1px solid rgba(255,255,255,0.6);
-  pointer-events: auto; /* Re-enable clicks for the bar itself */
+  background: var(--white);
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .file-preview-float {

@@ -13,7 +13,17 @@
         </div>
         
         <div v-if="post && !post.is_deleted" class="edit-actions">
-          <button class="action-btn edit-btn" @click="editPost">编辑</button>
+          <button class="icon-action-btn" @click="copyPostContent" title="复制内容">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+          </button>
+          
+          <button class="icon-action-btn delete-icon" @click="softDelete" title="移至回收站" :disabled="processing">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
+          
+          <button class="icon-action-btn edit-icon" @click="editPost" title="编辑日志">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          </button>
         </div>
       </div>
     </header>
@@ -49,6 +59,7 @@
 import { ref, onMounted, nextTick, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fileURL, getBaseURL } from '../api'
+import { Clipboard } from '@capacitor/clipboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -175,6 +186,34 @@ function editPost() {
   router.push(`/posts/${post.value.id}/edit`)
 }
 
+async function copyPostContent() {
+  if (!post.value) return
+  const textToCopy = post.value.content || post.value.safe_content || ''
+  try {
+    await Clipboard.write({ string: textToCopy })
+    toast('日志内容已复制')
+  } catch(e) {
+    try {
+        await navigator.clipboard.writeText(textToCopy)
+        toast('日志内容已复制')
+    } catch (err) { }
+  }
+}
+
+async function softDelete() {
+  if (!confirm('确定要移至回收站吗？')) return
+  processing.value = true
+  try {
+    await api.deletePost(post.value.id)
+    toast('已移至回收站')
+    router.replace('/posts')
+  } catch(e) {
+    toast(e.message || '操作失败')
+  } finally {
+    processing.value = false
+  }
+}
+
 async function restore() {
   if (!confirm('确定要恢复这篇日志吗？')) return
   processing.value = true
@@ -256,7 +295,25 @@ async function hardDelete() {
 .restore-btn { background: var(--primary); color: white; box-shadow: var(--shadow-sm); }
 .delete-btn { background: #fee2e2; color: var(--danger); }
 .edit-btn { background: #e2e8f0; color: var(--dark); }
-.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.action-btn:disabled, .icon-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.icon-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--gray);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.icon-action-btn:hover { background: rgba(148, 163, 184, 0.2); color: var(--dark); }
+.icon-action-btn.delete-icon:hover { background: #fee2e2; color: var(--danger); }
+.icon-action-btn.edit-icon:hover { background: #e0f2fe; color: var(--primary); }
+.icon-action-btn:active { transform: scale(0.9); }
 
 .content-wrapper { padding: 20px; padding-bottom: 60px; }
 
