@@ -500,16 +500,26 @@ func (app *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) handleSession(w http.ResponseWriter, r *http.Request) {
+	var username string
+	var isAdmin bool
 	sess := app.getSession(r)
 	if sess == nil {
-		jsonResponse(w, map[string]bool{"logged_in": false})
-		return
+		user := app.getAPIUser(r)
+		if user == "" {
+			jsonResponse(w, map[string]bool{"logged_in": false})
+			return
+		}
+		username = user
+		isAdmin = false // Token users aren't admins by default
+	} else {
+		username = sess.Username
+		isAdmin = sess.IsAdmin
 	}
 	token := ""
 	if c, err := r.Cookie("session"); err == nil {
 		token = c.Value
 	}
-	jsonResponse(w, map[string]interface{}{"logged_in": true, "username": sess.Username, "is_admin": sess.IsAdmin, "token": token})
+	jsonResponse(w, map[string]interface{}{"logged_in": true, "username": username, "is_admin": isAdmin, "token": token})
 }
 
 func clampString(s string, maxRunes int) string {

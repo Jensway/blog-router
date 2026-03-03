@@ -1790,13 +1790,6 @@
             <div class="plaza-input-area">
                 <div class="ai-input-container"
                     style="flex:1; display:flex; flex-direction:column; background:var(--bg-body); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color 0.2s;">
-                    <div id="plazaEditHeader"
-                        style="display:none; justify-content:space-between; align-items:center; padding:4px 8px; color:var(--primary); font-size:12px; font-weight:bold; border-bottom:1px solid rgba(16, 185, 129, 0.1);">
-                        <span>正在编辑消息...</span>
-                        <button class="icon-btn" onclick="cancelPlazaEdit()" title="取消编辑"
-                            style="width:20px;height:20px;padding:0;"><i data-lucide="x"
-                                style="width:14px;height:14px;"></i></button>
-                    </div>
                     <textarea id="plazaInput" placeholder="说点什么..."
                         style="width:100%; min-height:44px; padding:12px 14px 4px 14px; border:none; background:transparent; font-size:14px; color:var(--text-ui); outline:none; resize:none; overflow-y:hidden;"></textarea>
 
@@ -2588,9 +2581,16 @@
 
             window.editingMessageId = null;
             window.cancelPlazaEdit = function () {
+                if (window.editingMessageId) {
+                    const oldIcon = document.querySelector(`.plaza-msg-edit[data-mid="${window.editingMessageId}"]`);
+                    if (oldIcon) {
+                        oldIcon.setAttribute('data-lucide', 'edit-2');
+                        oldIcon.style.color = '';
+                        lucide.createIcons();
+                    }
+                }
                 window.editingMessageId = null;
                 $('plazaInput').value = '';
-                $('plazaEditHeader').style.display = 'none';
                 $('plazaFile').value = '';
             };
 
@@ -3109,9 +3109,20 @@
 
                 const msgEdit = e.target.closest('.plaza-msg-edit[data-mid]');
                 if (msgEdit) {
+                    if (window.editingMessageId === msgEdit.dataset.mid) {
+                        // User clicked the active save button, commit the edit!
+                        sendMessage();
+                        return;
+                    }
+
+                    window.cancelPlazaEdit(); // Reset any other active edits
                     window.editingMessageId = msgEdit.dataset.mid;
                     $('plazaInput').value = document.createElement('textarea').appendChild(document.createTextNode(msgEdit.dataset.content)).parentNode.innerHTML;
-                    $('plazaEditHeader').style.display = 'flex';
+
+                    msgEdit.setAttribute('data-lucide', 'check');
+                    msgEdit.style.color = 'var(--danger)';
+                    lucide.createIcons();
+
                     $('plazaInput').focus();
                     return;
                 }
@@ -3135,6 +3146,10 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             };
             $('plazaInput').onkeydown = e => {
+                if (e.key === 'Escape' && window.editingMessageId) {
+                    window.cancelPlazaEdit();
+                    return;
+                }
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
