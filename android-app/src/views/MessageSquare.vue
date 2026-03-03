@@ -17,47 +17,37 @@
       </div>
       
       <ul v-else class="list">
-        <li v-for="m in messages" :key="m.id" class="msg-swipe-container">
-          <div class="msg-swipe-track">
-            <!-- Main Card -->
-            <div class="msg-card">
-              <div class="msg-head">
-                <div class="user-info">
-                  <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
-                  <span class="user">{{ m.username }}</span>
-                </div>
-                <div class="head-actions">
-                  <button v-if="m.username === username" class="inline-edit-btn" @click.stop="editingMsg && editingMsg.id === m.id ? send() : startEdit(m)">
-                    <span v-if="editingMsg && editingMsg.id === m.id" style="color:var(--danger)">✔️</span>
-                    <span v-else>✏️</span>
-                  </button>
-                  <span class="time">{{ m.created_at }}</span>
-                </div>
+        <li v-for="m in messages" :key="m.id" class="msg-item">
+          <div class="msg-card">
+            <div class="msg-head">
+              <div class="user-info">
+                <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
+                <span class="user">{{ m.username }}</span>
+                <span class="time">{{ m.created_at }}</span>
               </div>
-              <p v-if="m.content" class="msg-content">{{ m.content }}</p>
-              <div v-if="m.file_url" class="msg-attachment">
-                <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" @click="openFullscreen(fileURL('/api/file/' + m.file_url))" />
-                <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
-                  <span class="file-icon">📄</span>
-                  <span class="file-txt">{{ m.file_name || '附件' }}</span>
-                </a>
+              <div class="head-actions">
+                <button v-if="m.content" class="inline-action-btn" @click.stop="copyText(m.content)" title="复制">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button v-if="m.file_url" class="inline-action-btn" @click.stop="openBrowser(fileURL('/api/file/' + m.file_url))" title="下载">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+                <button v-if="m.username === username" class="inline-action-btn" @click.stop="editingMsg && editingMsg.id === m.id ? send() : startEdit(m)" title="编辑">
+                  <svg v-if="editingMsg && editingMsg.id === m.id" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button v-if="m.username === username" class="inline-action-btn danger-btn" @click.stop="deleteMsg(m.id)" title="删除">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
               </div>
             </div>
-
-            <!-- Swipe Actions -->
-            <div class="msg-actions">
-              <button class="action-btn action-copy" v-if="m.content" @click="copyText(m.content)">
-                <span>📋</span>
-                <small>复制</small>
-              </button>
-              <button class="action-btn action-download" v-if="m.file_url" @click="openBrowser(fileURL('/api/file/' + m.file_url))">
-                <span>📥</span>
-                <small>下载</small>
-              </button>
-              <button class="action-btn action-delete" v-if="m.username === username" @click="deleteMsg(m.id)">
-                <span>🗑️</span>
-                <small>删除</small>
-              </button>
+            <p v-if="m.content" class="msg-content">{{ m.content }}</p>
+            <div v-if="m.file_url" class="msg-attachment">
+              <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" @click="openFullscreen(fileURL('/api/file/' + m.file_url))" />
+              <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
+                <span class="file-icon">📄</span>
+                <span class="file-txt">{{ m.file_name || '附件' }}</span>
+              </a>
             </div>
           </div>
         </li>
@@ -570,26 +560,14 @@ onUnmounted(() => {
 .error-box { color: var(--danger); font-weight: 500; }
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 
-/* Chat Bubbles Swipe Container */
+/* Chat Item */
 .list { list-style: none; margin: 0; padding: 0; }
-.msg-swipe-container {
-  width: 100vw;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+.msg-item {
   margin-bottom: 16px;
-}
-.msg-swipe-container::-webkit-scrollbar { display: none; }
-
-.msg-swipe-track {
-  display: flex;
-  width: max-content;
+  width: 100%;
 }
 
 .msg-card {
-  width: calc(100vw - 40px); /* Fill screen minus padding */
-  scroll-snap-align: center;
   margin: 0 20px;
   background: var(--white);
   border-radius: 20px;
@@ -598,39 +576,13 @@ onUnmounted(() => {
   border: 1px solid rgba(0,0,0,0.02);
 }
 
-.msg-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 20px; /* Padding for the trailing edge */
-  scroll-snap-align: end;
-}
-
-.action-btn {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 60px;
-  height: 100%;
-  border-radius: 16px;
-  border: none;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-.action-btn span { font-size: 20px; margin-bottom: 4px; }
-.action-copy { background: var(--primary-light); }
-.action-download { background: #10b981; } /* Emerald */
-.action-delete { background: var(--danger); }
-
 .msg-head { 
   display: flex; 
   justify-content: space-between; 
   align-items: center;
   margin-bottom: 12px; 
 }
-.user-info { display: flex; align-items: center; gap: 8px; }
+.user-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .avatar {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
@@ -642,26 +594,35 @@ onUnmounted(() => {
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
+  flex-shrink: 0;
 }
-.user { font-weight: 700; font-size: 15px; color: var(--dark); }
+.user { font-weight: 700; font-size: 15px; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
 
-.head-actions { display: flex; align-items: center; gap: 8px; }
-.time { font-size: 12px; color: #94a3b8; }
+.head-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 
-.inline-edit-btn {
+.inline-action-btn {
   background: transparent;
   border: none;
-  font-size: 14px;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background 0.2s;
+  border-radius: 6px;
+  color: #94a3b8;
   cursor: pointer;
+  transition: all 0.2s;
 }
-.inline-edit-btn:active {
+.inline-action-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.inline-action-btn:active {
   background: rgba(0,0,0,0.05);
+  color: var(--primary);
+}
+.danger-btn:active {
+  color: var(--danger);
 }
 .msg-copy-btn {
   background: none;
