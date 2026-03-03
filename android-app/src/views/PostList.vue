@@ -104,8 +104,6 @@ function closeSearch() {
   searchQuery.value = ''
 }
 
-const currentTab = ref('active')
-
 // Dynamic Categories Array (extracted from loaded posts)
 const dynamicCategories = computed(() => {
   const cats = new Set()
