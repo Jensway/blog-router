@@ -80,6 +80,7 @@ function rewriteImageSrcs(html) {
 const editorConfig = {
   plugins: 'link image lists table code wordcount',
   toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code',
+  toolbar_mode: 'sliding',
   menubar: false,
   statusbar: false,
   height: '100%',
@@ -263,5 +264,18 @@ function goBack() {
   flex: 1;
   border: none !important;
   border-radius: 8px !important;
+}
+
+/* Shrink TinyMCE Toolbar Buttons to prevent excessive horizontal scrolling */
+:deep(.tox .tox-tbtn) {
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 1px !important;
+}
+:deep(.tox .tox-tbtn svg) {
+  transform: scale(0.8) !important;
+}
+:deep(.tox .tox-toolbar__group) {
+  padding: 0 2px !important;
 }
 </style>
