@@ -620,7 +620,7 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .action-btn span { font-size: 20px; margin-bottom: 4px; }
-.action-edit { background: var(--secondary); }
+.action-edit { background: #3b82f6; } /* Blue */
 .action-copy { background: var(--primary-light); }
 .action-download { background: #10b981; } /* Emerald */
 .action-delete { background: var(--danger); }
