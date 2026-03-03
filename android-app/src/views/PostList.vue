@@ -2,14 +2,13 @@
   <div class="page" ref="pageEl">
     <header :class="['header blur-header', { 'header-hidden': isHeaderHidden }]">
       <div class="header-content" v-if="!searchActive">
-        <div class="tabs">
-          <div class="tab-indicator" :style="{ 
-            transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
-            width: 'calc(33.333% - 2.66px)'
-          }"></div>
-          <button :class="['tab-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
-          <button :class="['tab-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
-          <button :class="['tab-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+        <div class="chips-container">
+          <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">全部</button>
+          <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
+          <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+          <button v-for="cat in dynamicCategories" :key="cat" :class="['chip-btn', { active: currentTab === cat }]" @click="setTab(cat)">
+            {{ cat }}
+          </button>
         </div>
         <div class="header-actions">
           <button class="header-icon-btn" @click="searchActive = true" title="搜索">
@@ -105,10 +104,30 @@ function closeSearch() {
   searchQuery.value = ''
 }
 
+const currentTab = ref('active')
+
+// Dynamic Categories Array (extracted from loaded posts)
+const dynamicCategories = computed(() => {
+  const cats = new Set()
+  posts.value.forEach(p => {
+    if (p.category) cats.add(p.category)
+  })
+  return Array.from(cats)
+})
+
 const filteredPosts = computed(() => {
-  if (!searchQuery.value) return posts.value
+  let result = posts.value
+
+  // Post filtering purely by currentTab if it's a dynamic category
+  if (currentTab.value !== 'active' && currentTab.value !== 'draft' && currentTab.value !== 'trash') {
+    result = result.filter(p => p.category === currentTab.value)
+  }
+
+  // Search query filtering
+  if (!searchQuery.value) return result
+  
   const q = searchQuery.value.toLowerCase()
-  return posts.value.filter(p => {
+  return result.filter(p => {
     const t = postTitle(p).toLowerCase()
     const c = (p.category || '').toLowerCase()
     const tags = getTags(p).map(tag => tag.toLowerCase()).join(' ')
@@ -189,20 +208,29 @@ function initPTR() {
       }
     }
   }, { passive: true })
+}
 
-  // Immersive Scroll Listener
-  el.addEventListener('scroll', () => {
-    const st = el.scrollTop
-    // If scrolling down and past 50px threshold, hide header
-    if (st > lastScrollTop && st > 50) {
-      isHeaderHidden.value = true
-    } 
-    // If scrolling up (at least 5px delta to prevent jitters) or at the top, show header
-    else if (st < lastScrollTop - 5 || st <= 0) {
-      isHeaderHidden.value = false
-    }
-    lastScrollTop = st <= 0 ? 0 : st
-  }, { passive: true })
+let scrollParent = null
+
+function initImmersiveScroll() {
+  // Find the actual scrolling parent element (usually .tab-content in MainLayout)
+  scrollParent = document.querySelector('.tab-content') || window
+  
+  scrollParent.addEventListener('scroll', handleScroll, { passive: true })
+}
+
+function handleScroll(e) {
+  const st = scrollParent === window ? window.scrollY : scrollParent.scrollTop
+  
+  // If scrolling down and past 50px threshold, hide header
+  if (st > lastScrollTop && st > 50) {
+    isHeaderHidden.value = true
+  } 
+  // If scrolling up (at least 5px delta to prevent jitters) or at the top, show header
+  else if (st < lastScrollTop - 5 || st <= 0) {
+    isHeaderHidden.value = false
+  }
+  lastScrollTop = st <= 0 ? 0 : st
 }
 
 async function load() {
@@ -210,10 +238,14 @@ async function load() {
   error.value = ''
   try {
     let params = { draft: '0', trash: '0' }
+    
+    // If not trash or draft, always request standard posts
     if (currentTab.value === 'trash') params = { trash: '1' }
     else if (currentTab.value === 'draft') params = { draft: '1', trash: '0' }
     
-    posts.value = await api.getPosts(params)
+    // For custom dynamic categories, we still query standard active posts, and then filter locally above.
+    const res = await api.getPosts(params)
+    posts.value = res
   } catch (e) {
     error.value = e.message
     toast(e.message)
@@ -253,9 +285,17 @@ function goNewPost() {
 onMounted(() => {
   load()
   initPTR()
+  
+  // Need to wait for MainLayout.vue to render its .tab-content if this is a sub-route
+  setTimeout(() => {
+    initImmersiveScroll()
+  }, 300)
 })
 
 onUnmounted(() => {
+  if (scrollParent) {
+    scrollParent.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 
@@ -290,10 +330,43 @@ onUnmounted(() => {
   width: 100%;
 }
 
+.chips-container {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  overflow-x: auto;
+  padding-right: 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chips-container::-webkit-scrollbar { display: none; }
+
+.chip-btn {
+  background: var(--white);
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.chip-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0,0,0,0.05);
 }
 
 .header-icon-btn {
@@ -586,8 +659,6 @@ onUnmounted(() => {
   font-weight: 600;
   cursor: pointer;
 }
-
-.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 </style>
