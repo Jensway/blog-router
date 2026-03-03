@@ -2009,6 +2009,65 @@ func (app *App) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, msg)
 }
 
+func (app *App) handleUpdateMessage(w http.ResponseWriter, r *http.Request) {
+	username, _ := app.requireAuth(w, r)
+	if username == "" {
+		return
+	}
+
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/messages/")
+
+	var msgUsername string
+	err := app.db.QueryRow("SELECT username FROM messages WHERE id = ?", idStr).Scan(&msgUsername)
+	if err != nil {
+		jsonError(w, "消息不存在", http.StatusNotFound)
+		return
+	}
+
+	// 仅允许自己修改；管理员（通过 session）可改任意消息
+	sess := app.getSession(r)
+	if sess != nil && sess.IsAdmin {
+		// 网页端管理员
+	} else if msgUsername != username {
+		jsonError(w, "无权限", http.StatusForbidden)
+		return
+	}
+
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := app.decodeJSONLoose(r, &req, 64*1024); err != nil {
+		jsonError(w, "无效请求", http.StatusBadRequest)
+		return
+	}
+
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		jsonError(w, "内容不能为空", http.StatusBadRequest)
+		return
+	}
+	if len([]rune(content)) > 500 {
+		content = string([]rune(content)[:500])
+	}
+
+	_, err = app.db.Exec("UPDATE messages SET content = ? WHERE id = ?", content, idStr)
+	if err != nil {
+		jsonError(w, "更新失败", http.StatusInternalServerError)
+		return
+	}
+
+	var m Message
+	var fileURL, fileType, fileName sql.NullString
+	app.db.QueryRow("SELECT id, content, username, file_url, file_type, file_name, created_at FROM messages WHERE id = ?", idStr).
+		Scan(&m.ID, &m.Content, &m.Username, &fileURL, &fileType, &fileName, &m.CreatedAt)
+	m.FileURL = fileURL.String
+	m.FileType = fileType.String
+	m.FileName = fileName.String
+
+	app.broadcastToAll(map[string]interface{}{"type": "message_updated", "data": m})
+	jsonResponse(w, m)
+}
+
 func (app *App) handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
 	username, _ := app.requireAuth(w, r)
 	if username == "" {
@@ -2450,6 +2509,8 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			app.handleGetMessages(w, r)
 		case path == "/api/messages" && r.Method == "POST":
 			app.handleCreateMessage(w, r)
+		case strings.HasPrefix(path, "/api/messages/") && r.Method == "PUT":
+			app.handleUpdateMessage(w, r)
 		case strings.HasPrefix(path, "/api/messages/") && r.Method == "DELETE":
 			app.handleDeleteMessage(w, r)
 		case path == "/api/admin/settings" && r.Method == "GET":

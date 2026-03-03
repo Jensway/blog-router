@@ -1790,6 +1790,13 @@
             <div class="plaza-input-area">
                 <div class="ai-input-container"
                     style="flex:1; display:flex; flex-direction:column; background:var(--bg-body); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color 0.2s;">
+                    <div id="plazaEditHeader"
+                        style="display:none; justify-content:space-between; align-items:center; padding:4px 8px; color:var(--primary); font-size:12px; font-weight:bold; border-bottom:1px solid rgba(16, 185, 129, 0.1);">
+                        <span>正在编辑消息...</span>
+                        <button class="icon-btn" onclick="cancelPlazaEdit()" title="取消编辑"
+                            style="width:20px;height:20px;padding:0;"><i data-lucide="x"
+                                style="width:14px;height:14px;"></i></button>
+                    </div>
                     <textarea id="plazaInput" placeholder="说点什么..."
                         style="width:100%; min-height:44px; padding:12px 14px 4px 14px; border:none; background:transparent; font-size:14px; color:var(--text-ui); outline:none; resize:none; overflow-y:hidden;"></textarea>
 
@@ -2579,6 +2586,14 @@
                 api('/api/messages').then(data => renderMessages(data || [], false));
             }
 
+            window.editingMessageId = null;
+            window.cancelPlazaEdit = function () {
+                window.editingMessageId = null;
+                $('plazaInput').value = '';
+                $('plazaEditHeader').style.display = 'none';
+                $('plazaFile').value = '';
+            };
+
             function renderMessages(msgs, prepend) {
                 const container = $('plazaMessages');
                 const html = msgs.map(m => {
@@ -2625,6 +2640,8 @@
                     <span class="plaza-msg-user">${escapeHtml(m.username)}</span>
                     <span style="display:flex;align-items:center;gap:8px;">
                         <span class="plaza-msg-time">${m.created_at?.substring(0, 16) || ''}</span>
+                        ${canDelete ? `<i data-lucide="edit-2" class="plaza-msg-action plaza-msg-edit" 
+                            style="width:14px;" data-mid="${m.id}" title="编辑" data-content="${escapeHtml(m.content || '')}"></i>` : ''}
                         ${m.content ? `<i data-lucide="copy" class="plaza-msg-action" style="width:14px;" 
                            onclick="copyText(\`${escapeHtml(m.content).replace(/`/g, '\\`')}\`)" title="复制"></i>` : ''}
                         ${downloadBtn}
@@ -2900,6 +2917,22 @@
 
 
                 try {
+                    if (window.editingMessageId) {
+                        const msgRes = await fetch('/api/messages/' + window.editingMessageId, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content: content })
+                        });
+                        const j = await msgRes.json();
+                        if (!msgRes.ok) throw new Error(j.error || '保存失败');
+                        toast('修改成功');
+                        window.cancelPlazaEdit();
+                        loadMessages();
+                        sendBtn.innerHTML = originalText;
+                        sendBtn.disabled = false;
+                        return;
+                    }
+
                     let result;
                     if (file && file.size >= CHUNK_THRESHOLD) {
                         // 大文件：分块上传
@@ -3071,6 +3104,15 @@
                             toast('已删除');
                         })
                         .catch(e => toast(e.message));
+                    return;
+                }
+
+                const msgEdit = e.target.closest('.plaza-msg-edit[data-mid]');
+                if (msgEdit) {
+                    window.editingMessageId = msgEdit.dataset.mid;
+                    $('plazaInput').value = document.createElement('textarea').appendChild(document.createTextNode(msgEdit.dataset.content)).parentNode.innerHTML;
+                    $('plazaEditHeader').style.display = 'flex';
+                    $('plazaInput').focus();
                     return;
                 }
             });

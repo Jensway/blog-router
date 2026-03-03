@@ -113,6 +113,9 @@ export const api = {
   async deleteMessage(id) {
     return request(`/api/messages/${id}`, { method: 'DELETE' })
   },
+  async updateMessage(id, body) {
+    return request(`/api/messages/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  },
   async uploadFile(file) {
     const base = getBaseURL()
     if (!base) throw new Error('请先设置服务器地址')

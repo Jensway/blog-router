@@ -42,6 +42,10 @@
 
             <!-- Swipe Actions -->
             <div class="msg-actions">
+              <button class="action-btn action-edit" v-if="m.username === username" @click="startEdit(m)">
+                <span>✏️</span>
+                <small>编辑</small>
+              </button>
               <button class="action-btn action-copy" v-if="m.content" @click="copyText(m.content)">
                 <span>📋</span>
                 <small>复制</small>
@@ -50,7 +54,7 @@
                 <span>📥</span>
                 <small>下载</small>
               </button>
-              <button class="action-btn action-delete" @click="deleteMsg(m.id)">
+              <button class="action-btn action-delete" v-if="m.username === username" @click="deleteMsg(m.id)">
                 <span>🗑️</span>
                 <small>删除</small>
               </button>
@@ -81,6 +85,10 @@
           <input type="file" ref="fileInput" style="display: none" @change="onFileSelected" />
           
           <div class="ai-input-container">
+            <div v-if="editingMsg" class="edit-header">
+              <span>正在编辑消息...</span>
+              <button class="cancel" @click="cancelEdit" title="取消编辑">×</button>
+            </div>
             <textarea 
               ref="textInput"
               v-model="newContent" 
@@ -132,6 +140,8 @@ const loading = ref(true)
 const error = ref('')
 const newContent = ref('')
 const sending = ref(false)
+const editingMsg = ref(null)
+const username = ref('')
 
 const textInput = ref(null)
 const fileInput = ref(null)
@@ -255,6 +265,8 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    const sess = await api.session()
+    username.value = sess && sess.username ? sess.username : ''
     messages.value = await api.getMessages()
     
     // Check if we arrived here from an Android system Share Intent
@@ -341,6 +353,14 @@ async function send() {
   try {
     let payload = { content }
     
+    if (editingMsg.value) {
+      await api.updateMessage(editingMsg.value.id, payload)
+      toast('修改成功')
+      cancelEdit()
+      await load()
+      return
+    }
+    
     if (selectedFile.value) {
       toast('正在上传附件…')
       const uploadRes = await api.uploadFile(selectedFile.value)
@@ -382,6 +402,20 @@ const msgContainer = ref(null)
 const ptrIndicator = ref(null)
 const ptrRefreshing = ref(false)
 let ptrStartY = 0, ptrPulling = false, ptrDy = 0
+
+function startEdit(m) {
+  editingMsg.value = m
+  newContent.value = m.content || ''
+  if (textInput.value) {
+    textInput.value.focus()
+  }
+}
+
+function cancelEdit() {
+  editingMsg.value = null
+  newContent.value = ''
+  removeFile()
+}
 
 function initPTR() {
   const el = msgContainer.value
@@ -785,6 +819,26 @@ onUnmounted(() => {
   font-family: inherit;
   box-sizing: border-box;
   overflow-y: hidden;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  background: #f0fdf4;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+}
+.edit-header .cancel {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--gray);
+  cursor: pointer;
 }
 
 .chat-input-area:focus {
