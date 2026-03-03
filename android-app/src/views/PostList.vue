@@ -3,12 +3,21 @@
     <header :class="['header blur-header', { 'header-hidden': isHeaderHidden }]">
       <div class="header-content" v-if="!searchActive">
         <div class="chips-container">
-          <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">全部</button>
+          <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
           <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
           <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
-          <button v-for="cat in dynamicCategories" :key="cat" :class="['chip-btn', { active: currentTab === cat }]" @click="setTab(cat)">
-            {{ cat }}
-          </button>
+          
+          <div class="dropdown-wrapper" v-if="dynamicCategories.length > 0">
+            <button :class="['chip-btn dropdown-toggle', { active: isCategoryTab }]" @click.stop="dropdownOpen = !dropdownOpen">
+              {{ isCategoryTab ? currentTab : '标签' }}<span class="dropdown-arrow">▾</span>
+            </button>
+            <div class="dropdown-overlay" v-if="dropdownOpen" @click.stop="dropdownOpen = false"></div>
+            <div class="dropdown-menu" v-if="dropdownOpen">
+              <button v-for="cat in dynamicCategories" :key="cat" :class="['dropdown-item', { active: currentTab === cat }]" @click="setTab(cat); dropdownOpen = false">
+                {{ cat }}
+              </button>
+            </div>
+          </div>
         </div>
         <div class="header-actions">
           <button class="header-icon-btn" @click="searchActive = true" title="搜索">
@@ -103,6 +112,12 @@ function closeSearch() {
   searchActive.value = false
   searchQuery.value = ''
 }
+
+const dropdownOpen = ref(false)
+
+const isCategoryTab = computed(() => {
+  return currentTab.value !== 'active' && currentTab.value !== 'draft' && currentTab.value !== 'trash'
+})
 
 // Dynamic Categories Array (extracted from loaded posts)
 const dynamicCategories = computed(() => {
@@ -357,6 +372,63 @@ onUnmounted(() => {
   color: var(--primary);
   border-color: transparent;
   box-shadow: none;
+}
+
+/* Dropdown Menu Styles */
+.dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dropdown-arrow {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 8px 0;
+  min-width: 120px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  animation: slideFadeIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+}
+.dropdown-item {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--dark);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+.dropdown-item:active { background: rgba(0,0,0,0.05); }
+.dropdown-item.active {
+  color: var(--primary);
+  font-weight: 600;
+  background: rgba(14, 165, 233, 0.05);
 }
 
 .header-actions {
