@@ -1,14 +1,32 @@
 <template>
   <div class="page" ref="pageEl">
-    <header class="header blur-header">
-      <div class="tabs">
-        <div class="tab-indicator" :style="{ 
-          transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
-          width: 'calc(33.333% - 2.66px)'
-        }"></div>
-        <button :class="['tab-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
-        <button :class="['tab-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
-        <button :class="['tab-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+    <header :class="['header blur-header', { 'header-hidden': isHeaderHidden }]">
+      <div class="header-content" v-if="!searchActive">
+        <div class="tabs">
+          <div class="tab-indicator" :style="{ 
+            transform: `translateX(${currentTab === 'active' ? '0' : (currentTab === 'draft' ? '100%' : '200%')})`,
+            width: 'calc(33.333% - 2.66px)'
+          }"></div>
+          <button :class="['tab-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
+          <button :class="['tab-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
+          <button :class="['tab-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+        </div>
+        <div class="header-actions">
+          <button class="header-icon-btn" @click="searchActive = true" title="搜索">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+          <button class="header-icon-btn" @click="goNewPost" title="写日志">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div class="search-bar" v-else>
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="search" ref="searchInputRef" v-model="searchQuery" class="search-input" placeholder="搜索主题、分类或标签..." @keyup.esc="closeSearch" />
+          <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">×</button>
+        </div>
+        <button class="search-cancel" @click="closeSearch">取消</button>
       </div>
     </header>
 
@@ -31,7 +49,7 @@
       </div>
       
       <ul v-else class="list">
-        <li v-for="p in posts" :key="p.id" class="item card-hover" @click="goPost(p.id)">
+        <li v-for="p in filteredPosts" :key="p.id" class="item card-hover" @click="goPost(p.id)">
           <div class="item-content">
             <span class="title">{{ postTitle(p) }}</span>
             <div class="meta-row">
@@ -47,21 +65,16 @@
         </li>
       </ul>
       
-      <div v-if="!loading && !error && posts.length === 0" class="state-box empty-box">
+      <div v-if="!loading && !error && filteredPosts.length === 0" class="state-box empty-box">
         <div class="empty-icon">📝</div>
-        <p>{{ currentTab === 'trash' ? '回收站空空如也' : (currentTab === 'draft' ? '你还没有写过草稿' : '这里还没有任何日志。') }}</p>
+        <p>{{ searchQuery ? '未找到匹配的日志' : (currentTab === 'trash' ? '回收站空空如也' : (currentTab === 'draft' ? '你还没有写过草稿' : '这里还没有任何日志。')) }}</p>
       </div>
     </div>
-
-    <!-- Floating Action Button for New Post -->
-    <button v-if="currentTab === 'active'" class="fab" @click="goNewPost" aria-label="写日志">
-      <span>＋</span>
-    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, inject } from 'vue'
+import { ref, computed, onMounted, onUnmounted, inject, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, setConfig } from '../api'
 
@@ -71,6 +84,37 @@ const posts = ref([])
 const loading = ref(true)
 const error = ref('')
 const currentTab = ref('active')
+
+// Immersive Scroll & Search State
+const isHeaderHidden = ref(false)
+const searchActive = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref(null)
+let lastScrollTop = 0
+
+// Watch searchActive to focus input automatically
+watch(searchActive, async (val) => {
+  if (val) {
+    await nextTick()
+    if (searchInputRef.value) searchInputRef.value.focus()
+  }
+})
+
+function closeSearch() {
+  searchActive.value = false
+  searchQuery.value = ''
+}
+
+const filteredPosts = computed(() => {
+  if (!searchQuery.value) return posts.value
+  const q = searchQuery.value.toLowerCase()
+  return posts.value.filter(p => {
+    const t = postTitle(p).toLowerCase()
+    const c = (p.category || '').toLowerCase()
+    const tags = getTags(p).map(tag => tag.toLowerCase()).join(' ')
+    return t.includes(q) || c.includes(q) || tags.includes(q)
+  })
+})
 
 // Pure Vue Pull-to-Refresh State
 const pageEl = ref(null)
@@ -145,6 +189,20 @@ function initPTR() {
       }
     }
   }, { passive: true })
+
+  // Immersive Scroll Listener
+  el.addEventListener('scroll', () => {
+    const st = el.scrollTop
+    // If scrolling down and past 50px threshold, hide header
+    if (st > lastScrollTop && st > 50) {
+      isHeaderHidden.value = true
+    } 
+    // If scrolling up (at least 5px delta to prevent jitters) or at the top, show header
+    else if (st < lastScrollTop - 5 || st <= 0) {
+      isHeaderHidden.value = false
+    }
+    lastScrollTop = st <= 0 ? 0 : st
+  }, { passive: true })
 }
 
 async function load() {
@@ -218,6 +276,115 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(12px);
   padding: 12px 20px 12px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-hidden {
+  transform: translateY(-100%);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.header-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.header-icon-btn:active {
+  background: rgba(0,0,0,0.05);
+  color: var(--primary);
+}
+
+/* Internal File Search Bar */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  animation: slideFadeIn 0.2s ease-out forwards;
+}
+@keyframes slideFadeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 0 12px;
+  height: 40px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.search-icon {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  margin-right: 8px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--dark);
+  outline: none;
+  width: 100%;
+}
+.search-input::placeholder { color: #cbd5e1; font-weight: 500; }
+
+.clear-btn {
+  background: #cbd5e1;
+  color: white;
+  border: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.search-cancel {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px 0;
+  white-space: nowrap;
 }
 
 .icon-btn {
@@ -422,27 +589,5 @@ onUnmounted(() => {
 
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 
-/* Enhanced FAB */
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: calc(20px + var(--safe-bottom));
-  width: 42px;
-  height: 42px;
-  border-radius: 21px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
-  border: none;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
-  cursor: pointer;
-  z-index: 100;
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.fab span { transform: translateY(-1px); }
-.fab:hover { transform: scale(1.05); box-shadow: 0 14px 30px rgba(14, 165, 233, 0.5); }
-.fab:active { transform: scale(0.95); box-shadow: 0 5px 15px rgba(14, 165, 233, 0.3); }
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 </style>
