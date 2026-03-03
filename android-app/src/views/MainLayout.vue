@@ -57,7 +57,7 @@
   display: flex;
   justify-content: space-around;
   align-items: flex-end; /* Align closer to the bottom of the top bar */
-  height: 56px;
+  height: 46px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -105,7 +105,7 @@
   color: #94a3b8;
   text-decoration: none;
   transition: all 0.2s;
-  padding-bottom: 12px;
+  padding-bottom: 6px;
   position: relative;
 }
 

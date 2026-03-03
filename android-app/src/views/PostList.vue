@@ -331,7 +331,7 @@ onUnmounted(() => {
 .chips-container {
   display: flex;
   flex: 1;
-  gap: 8px;
+  gap: 16px;
   overflow-x: auto;
   padding-right: 12px;
   scrollbar-width: none;
@@ -340,23 +340,23 @@ onUnmounted(() => {
 .chips-container::-webkit-scrollbar { display: none; }
 
 .chip-btn {
-  background: var(--white);
-  border: 1px solid rgba(0,0,0,0.05);
-  padding: 6px 14px;
-  font-size: 14px;
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  font-size: 15px;
   font-weight: 600;
-  color: #64748b;
-  border-radius: 20px;
+  color: #94a3b8;
+  border-radius: 0;
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.2s;
   cursor: pointer;
 }
 .chip-btn.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2);
+  background: transparent;
+  color: var(--primary);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .header-actions {
