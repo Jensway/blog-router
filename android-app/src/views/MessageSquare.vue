@@ -27,6 +27,10 @@
                   <span class="user">{{ m.username }}</span>
                 </div>
                 <div class="head-actions">
+                  <button v-if="m.username === username" class="inline-edit-btn" @click.stop="editingMsg && editingMsg.id === m.id ? send() : startEdit(m)">
+                    <span v-if="editingMsg && editingMsg.id === m.id" style="color:var(--danger)">✔️</span>
+                    <span v-else>✏️</span>
+                  </button>
                   <span class="time">{{ m.created_at }}</span>
                 </div>
               </div>
@@ -42,10 +46,6 @@
 
             <!-- Swipe Actions -->
             <div class="msg-actions">
-              <button class="action-btn action-edit" v-if="m.username === username" @click="startEdit(m)">
-                <span>✏️</span>
-                <small>编辑</small>
-              </button>
               <button class="action-btn action-copy" v-if="m.content" @click="copyText(m.content)">
                 <span>📋</span>
                 <small>复制</small>
@@ -620,7 +620,6 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .action-btn span { font-size: 20px; margin-bottom: 4px; }
-.action-edit { background: #3b82f6; } /* Blue */
 .action-copy { background: var(--primary-light); }
 .action-download { background: #10b981; } /* Emerald */
 .action-delete { background: var(--danger); }
@@ -649,6 +648,21 @@ onUnmounted(() => {
 .head-actions { display: flex; align-items: center; gap: 8px; }
 .time { font-size: 12px; color: #94a3b8; }
 
+.inline-edit-btn {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.inline-edit-btn:active {
+  background: rgba(0,0,0,0.05);
+}
 .msg-copy-btn {
   background: none;
   border: none;
