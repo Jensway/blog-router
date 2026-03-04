@@ -20,12 +20,8 @@
           </div>
         </div>
         <div class="header-actions">
-          <button class="header-icon-btn" @click="searchActive = true" title="搜索">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </button>
-          <button class="header-icon-btn" @click="goNewPost" title="写日志">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
+          <button class="header-text-btn" @click="searchActive = true">搜索</button>
+          <button class="header-text-btn" @click="goNewPost">添加</button>
         </div>
       </div>
       <div class="search-bar" v-else>
@@ -160,8 +156,11 @@ function initPTR() {
   if (!el) return
 
   el.addEventListener('touchstart', (e) => {
-    // Only allow PTR when scrolled to the very top of the page
-    if (window.scrollY <= 0 && el.scrollTop <= 0 && !ptrRefreshing.value) {
+    // Only allow PTR when scrolled to the very top of the parent container
+    const sp = document.querySelector('.tab-content') || window
+    const st = sp === window ? window.scrollY : sp.scrollTop
+    
+    if (st <= 0 && !ptrRefreshing.value) {
       ptrStartY = e.touches[0].clientY
       ptrPulling = true
       ptrDy = 0
@@ -439,25 +438,18 @@ onUnmounted(() => {
   border-left: 1px solid rgba(0,0,0,0.05);
 }
 
-.header-icon-btn {
+.header-text-btn {
   background: transparent;
   border: none;
-  color: var(--dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 4px 8px;
   cursor: pointer;
-  border-radius: 50%;
   transition: all 0.2s;
 }
-.header-icon-btn svg {
-  width: 20px;
-  height: 20px;
-}
-.header-icon-btn:active {
-  background: rgba(0,0,0,0.05);
-  color: var(--primary);
+.header-text-btn:active {
+  opacity: 0.7;
 }
 
 /* Internal File Search Bar */
