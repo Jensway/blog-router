@@ -324,7 +324,7 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: #94a3b8;
   border-radius: 0;
   white-space: nowrap;
@@ -345,7 +345,7 @@ onUnmounted(() => {
   border: none;
   color: #94a3b8;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 6px 0;
   cursor: pointer;
   transition: all 0.2s;
