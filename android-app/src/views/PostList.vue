@@ -2,15 +2,11 @@
   <div class="page" ref="pageEl">
     <header :class="['header blur-header', { 'header-hidden': isHeaderHidden }]">
       <div class="header-content" v-if="!searchActive">
-        <div class="chips-container">
-          <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
-          <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
-          <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
-        </div>
-        <div class="header-actions">
-          <button class="header-text-btn" @click="searchActive = true">搜索</button>
-          <button class="header-text-btn" @click="goNewPost">添加</button>
-        </div>
+        <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
+        <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
+        <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+        <button class="header-text-btn" @click="searchActive = true">搜索</button>
+        <button class="header-text-btn" @click="goNewPost">添加</button>
       </div>
       <div class="search-bar" v-else>
         <div class="search-input-wrapper">
@@ -324,21 +320,9 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.chips-container {
-  display: flex;
-  flex: 1;
-  gap: 16px;
-  overflow-x: auto;
-  padding-right: 12px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.chips-container::-webkit-scrollbar { display: none; }
-
 .chip-btn {
   background: transparent;
   border: none;
-  padding: 6px 4px;
   font-size: 15px;
   font-weight: 600;
   color: #94a3b8;
@@ -347,6 +331,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   transition: all 0.2s;
   cursor: pointer;
+  padding: 6px 0;
 }
 .chip-btn.active {
   background: transparent;
@@ -355,21 +340,13 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(0,0,0,0.05);
-}
-
 .header-text-btn {
   background: transparent;
   border: none;
-  color: var(--primary);
+  color: #94a3b8;
   font-size: 15px;
   font-weight: 600;
-  padding: 6px 4px;
+  padding: 6px 0;
   cursor: pointer;
   transition: all 0.2s;
 }
