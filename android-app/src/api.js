@@ -107,6 +107,9 @@ export const api = {
   async hardDeletePost(id) {
     return request(`/api/posts/${id}/hard_delete`, { method: 'DELETE' })
   },
+  async emptyTrash() {
+    return request(`/api/posts/empty_trash`, { method: 'DELETE' })
+  },
   async getMessages() {
     return request('/api/messages')
   },

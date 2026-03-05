@@ -5,6 +5,7 @@
         <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
         <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
         <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
+        <button v-if="currentTab === 'trash'" class="header-text-btn danger-btn" @click="emptyTrash" :disabled="loading || filteredPosts.length === 0">清空</button>
         <button class="header-text-btn" @click="searchActive = true">搜索</button>
         <button class="header-text-btn" @click="goNewPost">添加</button>
       </div>
@@ -49,7 +50,8 @@
               <span v-if="currentTab === 'trash'" class="meta-badge trash-badge">已删除</span>
             </div>
           </div>
-          <div class="item-arrow">›</div>
+          <button v-if="currentTab === 'trash'" class="list-restore-btn" @click.stop="restorePost(p)">恢复</button>
+          <div v-else class="item-arrow">›</div>
         </li>
       </ul>
       
@@ -251,6 +253,34 @@ function setTab(tab) {
   }
 }
 
+async function emptyTrash() {
+  if (!confirm('确定要彻底清空回收站吗？此操作不可逆！')) return
+  try {
+    loading.value = true
+    await api.emptyTrash()
+    toast('回收站已清空')
+    await load()
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function restorePost(p) {
+  if (!confirm('确定要恢复这篇日志吗？')) return
+  try {
+    loading.value = true
+    await api.restorePost(p.id)
+    toast('已恢复')
+    await load()
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
 function postTitle(p) {
   const t = (p && (p.title || p.Title || '')).trim()
   if (t) return t
@@ -352,6 +382,13 @@ onUnmounted(() => {
 }
 .header-text-btn:active {
   opacity: 0.7;
+}
+.header-text-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.danger-btn {
+  color: #ef4444; /* Red color for destructive actions */
 }
 
 /* Internal File Search Bar */
@@ -582,14 +619,29 @@ onUnmounted(() => {
 }
 .trash-badge {
   background: #fef2f2;
-  color: var(--danger);
+  color: #ef4444;
   border: 1px solid #fee2e2;
 }
-
 .item-arrow {
-  font-size: 24px;
   color: #cbd5e1;
+  font-size: 24px;
   font-weight: 300;
+  padding-left: 8px;
+}
+.list-restore-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(14,165,233,0.2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.list-restore-btn:active {
+  transform: scale(0.95);
 }
 
 /* States */

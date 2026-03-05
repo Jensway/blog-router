@@ -17,20 +17,41 @@
         placeholder="标题 (可选，留空将截取正文片段)" 
         maxlength="120"
       />
-      <editor
-        v-model="post.content"
-        :init="editorConfig"
-        class="input-content"
-      />
+      <editor-content :editor="editor" class="input-content tiptap-wrapper" />
+    </div>
+
+    <!-- Tiptap Floating Bottom Toolbar -->
+    <div class="editor-toolbar" v-if="editor && !loading && !error">
+      <button @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }">
+        <b>B</b>
+      </button>
+      <button @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }">
+        <i>I</i>
+      </button>
+      <button @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'is-active': editor.isActive('bulletList') }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </button>
+      <button @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'is-active': editor.isActive('orderedList') }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+      </button>
+      <button @click="addImage">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, inject, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, inject, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fileURL, getBaseURL } from '../api'
-import Editor from '@tinymce/tinymce-vue'
+
+// Tiptap Imports
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
+import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
 
 const route = useRoute()
 const router = useRouter()
@@ -45,9 +66,24 @@ const error = ref('')
 const post = ref({
   title: '',
   content: '',
-  content_type: 'html',  // TinyMCE produces HTML
+  content_type: 'html',  // Tiptap produces HTML
   is_draft: false,
   source: 'android-app'
+})
+
+const editor = useEditor({
+  content: '',
+  extensions: [
+    StarterKit,
+    Placeholder.configure({
+      placeholder: '在这里写下你的日志正文...',
+    }),
+    Image,
+    Link.configure({ openOnClick: false })
+  ],
+  onUpdate: ({ editor }) => {
+    post.value.content = editor.getHTML()
+  }
 })
 
 /** 统一重写所有 img src：采用 DOM 解析代替正则，兼容性最好 */
@@ -77,53 +113,25 @@ function rewriteImageSrcs(html) {
   }
 }
 
-const editorConfig = {
-  plugins: 'link image lists table code wordcount',
-  toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code',
-  toolbar_mode: 'sliding',
-  menubar: false,
-  statusbar: false,
-  height: '100%',
-  width: '100%',
-  language: 'zh_CN',
-  placeholder: '在这里写下你的日志正文...',
-  init_instance_callback: function (editor) {
-    const doc = editor.getDoc()
-    if (!doc) return
-    
-    // 拦截所有远程图片，强制使用 Blob 重载，绕开 WebView 的 MIME/nosniff 安全审查
-    const images = doc.querySelectorAll('img')
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i]
-      const curSrc = img.getAttribute('src')
-      if (!curSrc || curSrc.startsWith('blob:') || curSrc.startsWith('data:')) continue
-      
-      try {
-        let name = curSrc.split('/').pop().split('?')[0];
-        name = decodeURIComponent(name);
-        const freshUrl = fileURL('/api/file/' + encodeURIComponent(name));
-        
-        fetch(freshUrl).then(res => {
-          if (res.ok) return res.blob()
-          throw new Error('Not OK')
-        }).then(blob => {
-          img.src = URL.createObjectURL(new Blob([blob], { type: 'image/png' }))
-        }).catch(() => {})
-      } catch (e) {}
-    }
-  },
-  images_upload_handler: async (blobInfo) => {
+// Minimal file upload binding for imagery
+async function addImage() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
     try {
-      const res = await api.uploadFile(blobInfo.blob())
+      const res = await api.uploadFile(file)
       if (res.url) {
-        return fileURL('/api/file/' + res.url)
-      } else {
-        throw new Error('上传返回格式错误')
+        const url = fileURL('/api/file/' + res.url)
+        editor.value.chain().focus().setImage({ src: url }).run()
       }
-    } catch(e) {
-      throw { message: e.message || '图片上传失败', remove: true }
+    } catch (err) {
+      toast(err.message || '图片上传失败')
     }
   }
+  input.click()
 }
 
 onMounted(async () => {
@@ -133,17 +141,25 @@ onMounted(async () => {
       const data = await api.getPost(postId)
       post.value = {
         title: data.title || '',
-        // 统一重写所有图片 src —— 包括相对路径和 /api/file/ 路径
         content: rewriteImageSrcs(data.content || ''),
-        content_type: 'html', // ensure we save back as html
+        content_type: 'html',
         is_draft: data.is_draft || false,
         source: 'android-app'
+      }
+      if (editor.value) {
+        editor.value.commands.setContent(post.value.content)
       }
     } catch (e) {
       error.value = '加载失败: ' + e.message
     } finally {
       loading.value = false
     }
+  }
+})
+
+onBeforeUnmount(() => {
+  if (editor.value) {
+    editor.value.destroy()
   }
 })
 
@@ -258,24 +274,71 @@ function goBack() {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 20px; /* offset for toolbar */
 }
-/* Ensure the TinyMCE editor fills the container height in mobile view */
-:deep(.tox-tinymce) {
+/* Tiptap inner editor root */
+:deep(.tiptap) {
   flex: 1;
-  border: none !important;
-  border-radius: 8px !important;
+  outline: none;
+  line-height: 1.6;
+  font-size: 16px;
+  color: #334155;
+  min-height: 200px;
+}
+:deep(.tiptap p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: #cbd5e1;
+  pointer-events: none;
+  height: 0;
+}
+:deep(.tiptap img) {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+:deep(.tiptap ul), :deep(.tiptap ol) {
+  padding-left: 20px;
 }
 
-/* Shrink TinyMCE Toolbar Buttons to prevent excessive horizontal scrolling */
-:deep(.tox .tox-tbtn) {
-  width: 28px !important;
-  height: 28px !important;
-  margin: 0 1px !important;
+/* Beautiful Floating Toolbar */
+.editor-toolbar {
+  position: sticky;
+  bottom: 12px;
+  align-self: center;
+  display: flex;
+  gap: 8px;
+  background: rgba(248, 250, 252, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 8px 12px;
+  border-radius: 100px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+  z-index: 10;
 }
-:deep(.tox .tox-tbtn svg) {
-  transform: scale(0.8) !important;
+.editor-toolbar button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-:deep(.tox .tox-toolbar__group) {
-  padding: 0 2px !important;
+.editor-toolbar button:active {
+  transform: scale(0.9);
+  background: #f1f5f9;
+}
+.editor-toolbar button.is-active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 2px 6px rgba(14,165,233,0.3);
 }
 </style>
