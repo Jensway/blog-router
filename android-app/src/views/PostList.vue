@@ -5,7 +5,6 @@
         <button :class="['chip-btn', { active: currentTab === 'active' }]" @click="setTab('active')">已发布</button>
         <button :class="['chip-btn', { active: currentTab === 'draft' }]" @click="setTab('draft')">草稿箱</button>
         <button :class="['chip-btn', { active: currentTab === 'trash' }]" @click="setTab('trash')">回收站</button>
-        <button v-if="currentTab === 'trash'" class="header-text-btn danger-btn" @click="emptyTrash" :disabled="loading || filteredPosts.length === 0">清空</button>
         <button class="header-text-btn" @click="searchActive = true">搜索</button>
         <button class="header-text-btn" @click="goNewPost">添加</button>
       </div>
@@ -50,7 +49,9 @@
               <span v-if="currentTab === 'trash'" class="meta-badge trash-badge">已删除</span>
             </div>
           </div>
-          <button v-if="currentTab === 'trash'" class="list-restore-btn" @click.stop="restorePost(p)">恢复</button>
+          <button v-if="currentTab === 'trash'" class="trash-menu-btn" @click.stop="openTrashMenu(p)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+          </button>
           <div v-else class="item-arrow">›</div>
         </li>
       </ul>
@@ -58,6 +59,29 @@
       <div v-if="!loading && !error && filteredPosts.length === 0" class="state-box empty-box">
         <div class="empty-icon">📝</div>
         <p>{{ searchQuery ? '未找到匹配的日志' : (currentTab === 'trash' ? '回收站空空如也' : (currentTab === 'draft' ? '你还没有写过草稿' : '这里还没有任何日志。')) }}</p>
+      </div>
+    </div>
+
+    <!-- Trash Action Sheet Overlay -->
+    <div class="action-sheet-overlay" v-if="selectedTrashPost" @click="closeTrashMenu">
+      <div class="action-sheet" @click.stop>
+        <div class="sheet-title">
+          <span class="sheet-title-text">{{ postTitle(selectedTrashPost) }}</span>
+        </div>
+        <button class="sheet-btn primary" @click="restorePost(selectedTrashPost)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+          恢复此日志
+        </button>
+        <button class="sheet-btn danger" @click="hardDeletePost(selectedTrashPost)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          彻底删除此项
+        </button>
+        <div class="sheet-divider"></div>
+        <button class="sheet-btn danger" @click="emptyTrash">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"></path><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"></path><path d="M4 6h16"></path><path d="M10 2h4"></path></svg>
+          清空整个回收站
+        </button>
+        <button class="sheet-btn cancel" @click="closeTrashMenu">取消</button>
       </div>
     </div>
   </div>
@@ -74,6 +98,9 @@ const posts = ref([])
 const loading = ref(true)
 const error = ref('')
 const currentTab = ref('active')
+
+// Trash Action Sheet State
+const selectedTrashPost = ref(null)
 
 // Immersive Scroll & Search State
 const isHeaderHidden = ref(false)
@@ -253,10 +280,19 @@ function setTab(tab) {
   }
 }
 
+function openTrashMenu(p) {
+  selectedTrashPost.value = p
+}
+
+function closeTrashMenu() {
+  selectedTrashPost.value = null
+}
+
 async function emptyTrash() {
   if (!confirm('确定要彻底清空回收站吗？此操作不可逆！')) return
   try {
     loading.value = true
+    closeTrashMenu()
     await api.emptyTrash()
     toast('回收站已清空')
     await load()
@@ -271,8 +307,24 @@ async function restorePost(p) {
   if (!confirm('确定要恢复这篇日志吗？')) return
   try {
     loading.value = true
+    closeTrashMenu()
     await api.restorePost(p.id)
     toast('已恢复')
+    await load()
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function hardDeletePost(p) {
+  if (!confirm('彻底删除后无法找回，确定要删除吗？')) return
+  try {
+    loading.value = true
+    closeTrashMenu()
+    await api.hardDeletePost(p.id)
+    toast('已彻底删除')
     await load()
   } catch (e) {
     toast(e.message)
@@ -622,26 +674,22 @@ onUnmounted(() => {
   color: #ef4444;
   border: 1px solid #fee2e2;
 }
+.trash-menu-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 8px;
+  margin: -8px;
+  cursor: pointer;
+}
+.trash-menu-btn:active {
+  color: var(--primary);
+}
 .item-arrow {
   color: #cbd5e1;
   font-size: 24px;
   font-weight: 300;
   padding-left: 8px;
-}
-.list-restore-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(14,165,233,0.2);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.list-restore-btn:active {
-  transform: scale(0.95);
 }
 
 /* States */
@@ -677,4 +725,79 @@ onUnmounted(() => {
 }
 
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+/* Action Sheet Styles */
+.action-sheet-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fade-in 0.2s ease-out;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.action-sheet {
+  background: var(--white);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 40px;
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
+}
+@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.sheet-title {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sheet-title-text {
+  display: block;
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.sheet-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f8fafc;
+  color: var(--dark);
+}
+.sheet-btn:active { transform: scale(0.98); background: #f1f5f9; }
+.sheet-btn.primary { background: #f0f9ff; color: var(--primary); }
+.sheet-btn.primary:active { background: #e0f2fe; }
+.sheet-btn.danger { background: #fef2f2; color: #ef4444; }
+.sheet-btn.danger:active { background: #fee2e2; }
+.sheet-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 16px 0;
+}
+.sheet-btn.cancel {
+  background: var(--white);
+  color: #94a3b8;
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-weight: 500;
+}
 </style>

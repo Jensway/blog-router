@@ -17,6 +17,10 @@
         placeholder="标题 (可选，留空将截取正文片段)" 
         maxlength="120"
       />
+      <div class="meta-inputs">
+        <input v-model="post.category" class="input-meta input-category" placeholder="分类 (如: 技术)" maxlength="30" />
+        <input v-model="post.tags" class="input-meta input-tags" placeholder="标签 (多个用逗号分隔)" maxlength="100" />
+      </div>
       <editor-content :editor="editor" class="input-content tiptap-wrapper" />
     </div>
 
@@ -33,6 +37,9 @@
       </button>
       <button @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'is-active': editor.isActive('orderedList') }">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+      </button>
+      <button @click="editor.chain().focus().toggleCodeBlock().run()" :class="{ 'is-active': editor.isActive('codeBlock') }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
       </button>
       <button @click="addImage">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -65,6 +72,8 @@ const error = ref('')
 
 const post = ref({
   title: '',
+  category: '',
+  tags: '',
   content: '',
   content_type: 'html',  // Tiptap produces HTML
   is_draft: false,
@@ -139,8 +148,16 @@ onMounted(async () => {
     loading.value = true
     try {
       const data = await api.getPost(postId)
+      
+      // Handle tags array to comma-separated string conversion
+      let displayTags = ''
+      if (Array.isArray(data.tags)) displayTags = data.tags.join(', ')
+      else if (typeof data.tags === 'string') displayTags = data.tags
+      
       post.value = {
         title: data.title || '',
+        category: data.category || '',
+        tags: displayTags,
         content: rewriteImageSrcs(data.content || ''),
         content_type: 'html',
         is_draft: data.is_draft || false,
@@ -172,12 +189,21 @@ async function save() {
   
   saving.value = true
   try {
+    // Convert comma-separated tags back to an array for the backend
+    let tagsArray = []
+    if (post.value.tags) {
+      tagsArray = post.value.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean)
+    }
+    
+    // Create a copy of the post to send to the API so we don't mutate the UI prematurely
+    const payload = { ...post.value, tags: tagsArray }
+
     if (isEdit.value) {
-      await api.updatePost(postId, post.value)
+      await api.updatePost(postId, payload)
       toast('保存成功')
       router.back()
     } else {
-      await api.createPost(post.value)
+      await api.createPost(payload)
       toast('发布成功')
       router.replace('/posts')
     }
@@ -265,10 +291,35 @@ function goBack() {
   border: none;
   border-bottom: 1px solid #f1f5f9;
   padding: 8px 0 16px 0;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   color: var(--dark);
 }
 .input-title:focus { outline: none; border-bottom-color: var(--primary); }
+
+.meta-inputs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.input-meta {
+  flex: 1;
+  border: none;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+}
+.input-meta:focus {
+  outline: none;
+  background: #f1f5f9;
+}
+.input-category {
+  flex: 0.4;
+}
+.input-tags {
+  flex: 0.6;
+}
 
 .input-content {
   flex: 1;
@@ -300,6 +351,22 @@ function goBack() {
 }
 :deep(.tiptap ul), :deep(.tiptap ol) {
   padding-left: 20px;
+}
+:deep(.tiptap pre) {
+  background: #1e293b;
+  color: #f8fafc;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+:deep(.tiptap pre code) {
+  background: none;
+  color: inherit;
+  padding: 0;
 }
 
 /* Beautiful Floating Toolbar */
