@@ -101,6 +101,9 @@ export const api = {
   async restorePost(id) {
     return request(`/api/posts/${id}/restore`, { method: 'POST' })
   },
+  async deletePost(id) {
+    return request(`/api/posts/${id}`, { method: 'DELETE' })
+  },
   async hardDeletePost(id) {
     return request(`/api/posts/${id}/hard_delete`, { method: 'DELETE' })
   },
