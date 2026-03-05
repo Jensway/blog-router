@@ -49,9 +49,28 @@
               <span v-if="currentTab === 'trash'" class="meta-badge trash-badge">已删除</span>
             </div>
           </div>
-          <button v-if="currentTab === 'trash'" class="trash-menu-btn" @click.stop="openTrashMenu(p)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-          </button>
+          <div class="item-actions" v-if="currentTab === 'trash'">
+            <button class="trash-menu-btn" @click.stop="toggleTrashMenu(p.id)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+            </button>
+            
+            <!-- Inline Popup Menu -->
+            <div class="inline-menu" v-if="activeMenuId === p.id" @click.stop>
+              <button class="inline-btn primary" @click="restorePost(p)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                恢复
+              </button>
+              <button class="inline-btn danger" @click="hardDeletePost(p)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                删除
+              </button>
+              <div class="inline-divider"></div>
+              <button class="inline-btn danger" @click="emptyTrash">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"></path><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"></path><path d="M4 6h16"></path><path d="M10 2h4"></path></svg>
+                清空
+              </button>
+            </div>
+          </div>
           <div v-else class="item-arrow">›</div>
         </li>
       </ul>
@@ -59,29 +78,6 @@
       <div v-if="!loading && !error && filteredPosts.length === 0" class="state-box empty-box">
         <div class="empty-icon">📝</div>
         <p>{{ searchQuery ? '未找到匹配的日志' : (currentTab === 'trash' ? '回收站空空如也' : (currentTab === 'draft' ? '你还没有写过草稿' : '这里还没有任何日志。')) }}</p>
-      </div>
-    </div>
-
-    <!-- Trash Action Sheet Overlay -->
-    <div class="action-sheet-overlay" v-if="selectedTrashPost" @click="closeTrashMenu">
-      <div class="action-sheet" @click.stop>
-        <div class="sheet-title">
-          <span class="sheet-title-text">{{ postTitle(selectedTrashPost) }}</span>
-        </div>
-        <button class="sheet-btn primary" @click="restorePost(selectedTrashPost)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
-          恢复此日志
-        </button>
-        <button class="sheet-btn danger" @click="hardDeletePost(selectedTrashPost)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          彻底删除此项
-        </button>
-        <div class="sheet-divider"></div>
-        <button class="sheet-btn danger" @click="emptyTrash">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"></path><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"></path><path d="M4 6h16"></path><path d="M10 2h4"></path></svg>
-          清空整个回收站
-        </button>
-        <button class="sheet-btn cancel" @click="closeTrashMenu">取消</button>
       </div>
     </div>
   </div>
@@ -99,8 +95,15 @@ const loading = ref(true)
 const error = ref('')
 const currentTab = ref('active')
 
-// Trash Action Sheet State
-const selectedTrashPost = ref(null)
+// Interactive State for Inline Context Menu
+const activeMenuId = ref(null)
+
+// Global click-away listener for inline menus
+onMounted(() => {
+  document.addEventListener('click', () => {
+    activeMenuId.value = null
+  })
+})
 
 // Immersive Scroll & Search State
 const isHeaderHidden = ref(false)
@@ -276,23 +279,24 @@ async function load() {
 function setTab(tab) {
   if (currentTab.value !== tab) {
     currentTab.value = tab
+    activeMenuId.value = null // reset menu on tab switch
     load()
   }
 }
 
-function openTrashMenu(p) {
-  selectedTrashPost.value = p
-}
-
-function closeTrashMenu() {
-  selectedTrashPost.value = null
+function toggleTrashMenu(id) {
+  if (activeMenuId.value === id) {
+    activeMenuId.value = null
+  } else {
+    activeMenuId.value = id
+  }
 }
 
 async function emptyTrash() {
   if (!confirm('确定要彻底清空回收站吗？此操作不可逆！')) return
   try {
     loading.value = true
-    closeTrashMenu()
+    activeMenuId.value = null
     await api.emptyTrash()
     toast('回收站已清空')
     await load()
@@ -307,7 +311,7 @@ async function restorePost(p) {
   if (!confirm('确定要恢复这篇日志吗？')) return
   try {
     loading.value = true
-    closeTrashMenu()
+    activeMenuId.value = null
     await api.restorePost(p.id)
     toast('已恢复')
     await load()
@@ -322,7 +326,7 @@ async function hardDeletePost(p) {
   if (!confirm('彻底删除后无法找回，确定要删除吗？')) return
   try {
     loading.value = true
-    closeTrashMenu()
+    activeMenuId.value = null
     await api.hardDeletePost(p.id)
     toast('已彻底删除')
     await load()
@@ -674,6 +678,14 @@ onUnmounted(() => {
   color: #ef4444;
   border: 1px solid #fee2e2;
 }
+
+/* Item Action Area (for relative positioning of menus) */
+.item-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .trash-menu-btn {
   background: transparent;
   border: none;
@@ -681,10 +693,61 @@ onUnmounted(() => {
   padding: 8px;
   margin: -8px;
   cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s;
 }
 .trash-menu-btn:active {
-  color: var(--primary);
+  background: #f1f5f9;
 }
+
+/* Inline Popup Menu */
+.inline-menu {
+  position: absolute;
+  top: 36px;
+  right: -8px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  min-width: 100px;
+  transform-origin: top right;
+  animation: pop-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.inline-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.inline-btn:active {
+  background: #f8fafc;
+}
+.inline-btn.primary { color: var(--primary); }
+.inline-btn.danger { color: var(--danger); }
+.inline-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
 .item-arrow {
   color: #cbd5e1;
   font-size: 24px;
@@ -725,79 +788,4 @@ onUnmounted(() => {
 }
 
 .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-
-/* Action Sheet Styles */
-.action-sheet-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  animation: fade-in 0.2s ease-out;
-}
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-
-.action-sheet {
-  background: var(--white);
-  border-radius: 24px 24px 0 0;
-  padding: 24px 20px 40px;
-  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
-}
-@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-.sheet-title {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.sheet-title-text {
-  display: block;
-  font-size: 14px;
-  color: #94a3b8;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.sheet-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  border: none;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #f8fafc;
-  color: var(--dark);
-}
-.sheet-btn:active { transform: scale(0.98); background: #f1f5f9; }
-.sheet-btn.primary { background: #f0f9ff; color: var(--primary); }
-.sheet-btn.primary:active { background: #e0f2fe; }
-.sheet-btn.danger { background: #fef2f2; color: #ef4444; }
-.sheet-btn.danger:active { background: #fee2e2; }
-.sheet-divider {
-  height: 1px;
-  background: #f1f5f9;
-  margin: 16px 0;
-}
-.sheet-btn.cancel {
-  background: var(--white);
-  color: #94a3b8;
-  margin-top: 8px;
-  margin-bottom: 0;
-  font-weight: 500;
-}
 </style>

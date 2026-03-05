@@ -303,6 +303,8 @@ function goBack() {
 }
 .input-meta {
   flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   border: none;
   background: #f8fafc;
   padding: 10px 14px;
