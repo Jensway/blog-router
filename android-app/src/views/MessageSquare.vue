@@ -86,7 +86,6 @@
               placeholder="说点什么…" 
               maxlength="1000" 
               @input="autoResize"
-              @keydown.enter.prevent="handleEnter"
               :disabled="sending"
               rows="1"
             ></textarea>
@@ -167,10 +166,7 @@ function autoResize() {
   textInput.value.style.height = Math.min(textInput.value.scrollHeight, 120) + 'px'; // Cap at ~5 lines
 }
 
-function handleEnter(e) {
-  if (e.shiftKey) return; // Allow Shift+Enter for newlines
-  send();
-}
+
 
 function isImage(file) {
   return file && file.type.startsWith('image/')
