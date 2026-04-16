@@ -6,10 +6,26 @@
       </transition>
     </router-view>
     
+    <!-- 长提示：毛玻璃模态卡片 (Apple 系风格) -->
+    <transition name="fade">
+      <div v-if="alert.show" class="alert-overlay" @click.self="alert.show = false">
+        <div class="alert-card">
+          <div class="alert-body">
+            <h3 v-if="alert.title" class="alert-title">{{ alert.title }}</h3>
+            <div class="alert-text">{{ alert.text }}</div>
+          </div>
+          <div class="alert-action" @click="alert.show = false">
+            <span>知道了</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 短提示：胶囊药丸悬浮框 -->
     <transition name="toast-slide">
       <div v-if="toast.show" class="toast">
         <span class="toast-icon">✨</span>
-        {{ toast.text }}
+        <span class="toast-content">{{ toast.text }}</span>
       </div>
     </transition>
   </div>
@@ -147,6 +163,14 @@ async function checkIntent() {
     console.error('Share intent check failed', err)
   }
 }
+
+const alert = reactive({ show: false, text: '', title: '' })
+function showAlert(text, title = '提示') {
+  alert.text = text
+  alert.title = title
+  alert.show = true
+}
+provide('alert', showAlert)
 </script>
 
 <style>
@@ -182,7 +206,6 @@ body {
 }
 
 .app { min-height: 100vh; }
-
 /* Page Transitions */
 .fade-slide-enter-active, 
 .fade-slide-leave-active { 
@@ -231,5 +254,79 @@ body {
 }
 .toast-icon {
   font-size: 16px;
+}
+
+/* Apple 风长提示：柔和毛玻璃模态卡片 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.alert-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  width: 290px;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.alert-body {
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.alert-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--dark);
+}
+
+.alert-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--gray);
+  max-height: 300px;
+  overflow-y: auto;
+  text-align: left; /* 左对齐解决狗啃边 */
+}
+
+.alert-action {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 14px 0;
+  text-align: center;
+  color: #007AFF; /* Apple Blue */
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.alert-action:active {
+  background: rgba(0, 0, 0, 0.05);
 }
 </style>
