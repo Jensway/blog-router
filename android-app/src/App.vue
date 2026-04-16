@@ -220,7 +220,7 @@ body {
   transform: translateY(-10px); 
 }
 
-/* Premium Toast */
+/* Premium Toast (Digital Garden Lite) */
 .toast-slide-enter-active,
 .toast-slide-leave-active {
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -233,30 +233,33 @@ body {
 
 .toast {
   position: fixed;
-  bottom: calc(32px + var(--safe-bottom));
+  bottom: calc(48px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.9);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--white);
-  padding: 14px 24px;
+  background: var(--white);
+  color: var(--primary-dark);
+  padding: 12px 24px;
   border-radius: 100px;
   font-size: 14px;
   font-weight: 500;
   z-index: 9999;
-  max-width: 90%;
+  max-width: 88%;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.toast-icon {
-  font-size: 16px;
+  box-shadow: 0 10px 30px rgba(14, 165, 233, 0.12), 0 2px 10px rgba(0,0,0,0.03);
+  border: 1px solid rgba(14, 165, 233, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Apple 风长提示：柔和毛玻璃模态卡片 */
+.toast-icon {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+/* Digital Garden Soft Alert Dialog */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
@@ -266,9 +269,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.4); /* Gentle dimming only */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -276,12 +277,10 @@ body {
 }
 
 .alert-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--white);
   width: 290px;
   border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -295,38 +294,42 @@ body {
 
 .alert-body {
   padding: 24px 20px 20px;
-  text-align: center;
+  text-align: left; /* Android standard native feel */
 }
 
 .alert-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: var(--dark);
 }
 
 .alert-text {
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--gray);
   max-height: 300px;
   overflow-y: auto;
-  text-align: left; /* 左对齐解决狗啃边 */
 }
 
 .alert-action {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 14px 0;
-  text-align: center;
-  color: #007AFF; /* Apple Blue */
-  font-size: 17px;
+  padding: 12px 20px 16px;
+  text-align: right; /* Android action buttons align right, no full width border */
+  color: var(--primary); 
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  transition: background 0.2s;
+  transition: opacity 0.2s;
 }
 
-.alert-action:active {
-  background: rgba(0, 0, 0, 0.05);
+.alert-action span {
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.alert-action:active span {
+  background: rgba(14, 165, 233, 0.08); /* Soft primary ripple */
+
 }
 </style>
