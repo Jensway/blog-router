@@ -244,68 +244,62 @@ onUnmounted(() => {
 })
 
 async function load() {
+  // Capture payload SYNCHRONOUSLY to prevent App.vue from overwriting it during async network fetch
+  const sharedRaw = localStorage.getItem('shared_intent_payload')
+  if (sharedRaw) {
+    localStorage.removeItem('shared_intent_payload')
+    try {
+      const shared = JSON.parse(sharedRaw)
+      if (shared.text && !shared.url) {
+        newContent.value = newContent.value ? newContent.value + '\n' + shared.text : shared.text
+      }
+      
+      if (shared.url) {
+        // Run async file bridge extraction independently
+        ;(async () => {
+          try {
+            const convertedUrl = Capacitor.convertFileSrc(shared.url)
+            let ext = shared.url.split('.').pop().toLowerCase()
+            if (!ext || ext === shared.url.toLowerCase() || ext.length > 5) ext = 'bin'
+            
+            const fetchRes = await fetch(convertedUrl)
+            if (!fetchRes.ok) throw new Error("WebView local proxy denied the read stream")
+            const blob = await fetchRes.blob()
+            
+            let mimeType = blob.type || 'application/octet-stream'
+            if (mimeType === 'application/octet-stream' || mimeType === '') {
+              if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
+              else if (ext === 'zip') mimeType = 'application/zip'
+              else if (ext === 'pdf') mimeType = 'application/pdf'
+              else if (ext === 'mp4') mimeType = 'video/mp4'
+              else if (ext === 'png') mimeType = 'image/png'
+              else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+            }
+            
+            let filename = shared.url.split('/').pop() || `shared_file.${ext}`
+            if (!filename.includes('.')) filename += `.${ext}`
+            
+            const file = new File([blob], filename, { type: mimeType })
+            let pUrl = ''
+            if (isImage(file)) pUrl = URL.createObjectURL(file)
+            selectedFiles.value.push({ file, previewUrl: pUrl })
+            
+            if (shared.text && !newContent.value) newContent.value = shared.text
+          } catch (e) {
+            console.error("Failed to read shared file intent:", e)
+            toast('文件读取失败，可能是系统权限限制')
+          }
+        })()
+      }
+    } catch (e) {}
+  }
+
   loading.value = true
   error.value = ''
   try {
     const sess = await api.session()
     username.value = sess && sess.username ? sess.username : ''
     messages.value = await api.getMessages()
-    
-    // Check if we arrived here from an Android system Share Intent
-    const sharedRaw = localStorage.getItem('shared_intent_payload')
-    if (sharedRaw) {
-      localStorage.removeItem('shared_intent_payload')
-      const shared = JSON.parse(sharedRaw)
-      
-      if (shared.text && !shared.url) {
-        newContent.value = shared.text
-      }
-      
-      if (shared.url) {
-        try {
-          // Utilize Capacitor's native local server to bypass Android 11+ strict Scoped Storage blocks!
-          // This safely transforms 'content://' or 'file://' intents into 'http://localhost/_capacitor_file_/' streams.
-          const convertedUrl = Capacitor.convertFileSrc(shared.url);
-          
-          let ext = shared.url.split('.').pop().toLowerCase()
-          if (!ext || ext === shared.url.toLowerCase() || ext.length > 5) {
-            ext = 'bin' // generic fallback
-          }
-          
-          // Natively stream the binary data into WebView memory directly
-          const fetchRes = await fetch(convertedUrl);
-          if (!fetchRes.ok) throw new Error("WebView local proxy denied the read stream");
-          const blob = await fetchRes.blob();
-          
-          let mimeType = blob.type || 'application/octet-stream'
-          
-          // Fallback manual mime assignment if the proxy couldn't intuit it
-          if (mimeType === 'application/octet-stream' || mimeType === '') {
-            if (ext === 'apk') mimeType = 'application/vnd.android.package-archive'
-            else if (ext === 'zip') mimeType = 'application/zip'
-            else if (ext === 'pdf') mimeType = 'application/pdf'
-            else if (ext === 'mp4') mimeType = 'video/mp4'
-            else if (ext === 'png') mimeType = 'image/png'
-            else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
-          }
-          
-          let filename = shared.url.split('/').pop() || `shared_file.${ext}`
-          // Fallback missing extensions on the filename just in case
-          if (!filename.includes('.')) filename += `.${ext}`
-          
-          const file = new File([blob], filename, { type: mimeType })
-          
-          let pUrl = ''
-          if (isImage(file)) pUrl = URL.createObjectURL(file)
-          selectedFiles.value.push({ file, previewUrl: pUrl })
-          
-          if (shared.text) newContent.value = shared.text
-        } catch (e) {
-          console.error("Failed to read shared file intent:", e)
-          toast('文件读取失败，可能是系统权限限制')
-        }
-      }
-    }
   } catch (e) {
     error.value = e.message
     toast(e.message)
