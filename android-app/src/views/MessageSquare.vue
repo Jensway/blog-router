@@ -61,18 +61,17 @@
     <!-- Enhanced Bottom Input Area -->
     <div class="send-area-wrapper">
       <div class="send-area glass-bar">
-        <!-- Preview Selected File -->
-        <div v-if="selectedFile" class="file-preview-float">
-          <div class="file-preview-content">
-            <img v-if="isImage(selectedFile)" :src="previewUrl" class="img-mini-preview" />
+        <div v-if="selectedFiles.length > 0" class="file-preview-float" style="display:flex; overflow-x:auto; gap:12px; padding-bottom:4px;">
+          <div v-for="(f, i) in selectedFiles" :key="i" class="file-preview-content" style="flex-shrink:0;">
+            <img v-if="isImage(f.file)" :src="f.previewUrl" class="img-mini-preview" />
             <div v-else class="file-mini-icon">📄</div>
-            <span class="file-name" :title="selectedFile.name">{{ selectedFile.name }}</span>
-            <button class="remove-btn" @click="removeFile" title="移除附件">×</button>
+            <span class="file-name" :title="f.file.name" style="max-width:80px;">{{ f.file.name }}</span>
+            <button class="remove-btn" @click="removeFile(i)" title="移除附件">×</button>
           </div>
         </div>
 
         <div class="send-bar">
-          <input type="file" ref="fileInput" style="display: none" @change="onFileSelected" />
+          <input type="file" ref="fileInput" multiple style="display: none" @change="onFileSelected" />
           
           <div class="ai-input-container">
             <div v-if="editingMsg" class="edit-header">
@@ -94,7 +93,7 @@
               <div class="ai-tools-left">
                 <button class="icon-action-btn" @click="$refs.fileInput.click()" title="发送图片/文件" :disabled="sending">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                  <span v-if="selectedFile" class="file-badge">1</span>
+                  <span v-if="selectedFiles.length > 0" class="file-badge">{{ selectedFiles.length }}</span>
                 </button>
                 
                 <button class="icon-action-btn" @click="pasteFromClipboard" title="一键粘贴" :disabled="sending">
@@ -102,7 +101,7 @@
                 </button>
               </div>
               
-              <button class="ai-send-btn" @click="send" :disabled="sending || (!newContent.trim() && !selectedFile)">
+              <button class="ai-send-btn" @click="send" :disabled="sending || (!newContent.trim() && selectedFiles.length === 0)">
                 <span v-if="sending" class="spinner-small"></span>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
               </button>
@@ -134,8 +133,7 @@ const username = ref('')
 
 const textInput = ref(null)
 const fileInput = ref(null)
-const selectedFile = ref(null)
-const previewUrl = ref('')
+const selectedFiles = ref([])
 
 // Create a temporary image to feed Viewer.js programmatically
 function openFullscreen(url) {
@@ -216,35 +214,33 @@ async function pasteFromClipboard() {
 }
 
 function onFileSelected(e) {
-  const file = e.target.files[0]
-  if (!file) return
+  const files = e.target.files
+  if (!files || files.length === 0) return
   
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-  }
-  
-  selectedFile.value = file
-  if (isImage(file)) {
-    previewUrl.value = URL.createObjectURL(file)
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    let pUrl = ''
+    if (isImage(file)) pUrl = URL.createObjectURL(file)
+    selectedFiles.value.push({ file, previewUrl: pUrl })
   }
   e.target.value = ''
 }
 
-function removeFile() {
-  selectedFile.value = null
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
+function removeFile(index) {
+  const item = selectedFiles.value[index]
+  if (item && item.previewUrl) {
+    URL.revokeObjectURL(item.previewUrl)
   }
-  if (fileInput.value) {
+  selectedFiles.value.splice(index, 1)
+  if (fileInput.value && selectedFiles.value.length === 0) {
     fileInput.value.value = ''
   }
 }
 
 onUnmounted(() => {
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-  }
+  selectedFiles.value.forEach(item => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+  })
 })
 
 async function load() {
@@ -299,8 +295,10 @@ async function load() {
           
           const file = new File([blob], filename, { type: mimeType })
           
-          selectedFile.value = file
-          previewUrl.value = URL.createObjectURL(file)
+          let pUrl = ''
+          if (isImage(file)) pUrl = URL.createObjectURL(file)
+          selectedFiles.value.push({ file, previewUrl: pUrl })
+          
           if (shared.text) newContent.value = shared.text
         } catch (e) {
           console.error("Failed to read shared file intent:", e)
@@ -331,15 +329,14 @@ async function deleteMsg(id) {
 async function send() {
   let content = newContent.value.trim()
   
-  if (!content && !selectedFile.value) {
+  if (!content && selectedFiles.value.length === 0) {
     return
   }
   
   sending.value = true
   try {
-    let payload = { content }
-    
     if (editingMsg.value) {
+      let payload = { content }
       await api.updateMessage(editingMsg.value.id, payload)
       toast('修改成功')
       cancelEdit()
@@ -347,31 +344,37 @@ async function send() {
       return
     }
     
-    if (selectedFile.value) {
-      toast('正在上传附件…')
-      const uploadRes = await api.uploadFile(selectedFile.value)
-      toast('上传成功，发送消息…')
-      
-      // Share-center's /api/upload endpoint for post_id=0 returns {"filename": "msg_xxx.ext", "url": "/api/file/msg_xxx.ext", "type": "image"}
-      if (uploadRes && uploadRes.filename) {
-        payload.file_url = uploadRes.filename
-        payload.file_name = uploadRes.orig_name || selectedFile.value.name
-        payload.file_type = uploadRes.type || (selectedFile.value.type.startsWith('image/') ? 'image' : 'file')
-      } else if (uploadRes && uploadRes.urls && uploadRes.urls.length > 0) {
-        // Fallback for V5 list format if present
-        payload.file_url = uploadRes.urls[0].url.replace('/api/file/', '')
-        payload.file_name = uploadRes.urls[0].name || selectedFile.value.name
-        payload.file_type = uploadRes.urls[0].type || 'file'
-      } else if (uploadRes && uploadRes.url) { 
-        payload.file_url = uploadRes.url.replace('/api/file/', '')
-        payload.file_name = uploadRes.name || selectedFile.value.name
-        payload.file_type = selectedFile.value.type.startsWith('image/') ? 'image' : 'file'
+    if (selectedFiles.value.length > 0) {
+      for (let i = 0; i < selectedFiles.value.length; i++) {
+        const item = selectedFiles.value[i]
+        toast(selectedFiles.value.length > 1 ? `正在上传附件 ${i+1}/${selectedFiles.value.length}…` : '正在上传附件…')
+        const uploadRes = await api.uploadFile(item.file)
+        
+        let payload = {}
+        payload.content = (i === 0) ? content : ''
+        
+        if (uploadRes && uploadRes.filename) {
+          payload.file_url = uploadRes.filename
+          payload.file_name = uploadRes.orig_name || item.file.name
+          payload.file_type = uploadRes.type || (item.file.type.startsWith('image/') ? 'image' : 'file')
+        } else if (uploadRes && uploadRes.urls && uploadRes.urls.length > 0) {
+          payload.file_url = uploadRes.urls[0].url.replace('/api/file/', '')
+          payload.file_name = uploadRes.urls[0].name || item.file.name
+          payload.file_type = uploadRes.urls[0].type || 'file'
+        } else if (uploadRes && uploadRes.url) { 
+          payload.file_url = uploadRes.url.replace('/api/file/', '')
+          payload.file_name = uploadRes.name || item.file.name
+          payload.file_type = item.file.type.startsWith('image/') ? 'image' : 'file'
+        }
+        await api.createMessage(payload)
       }
+    } else {
+      let payload = { content }
+      await api.createMessage(payload)
     }
     
-    await api.createMessage(payload)
     newContent.value = ''
-    removeFile()
+    while (selectedFiles.value.length > 0) removeFile(0)
     await load()
     
     // Smooth scroll to top after sending
@@ -400,7 +403,7 @@ function startEdit(m) {
 function cancelEdit() {
   editingMsg.value = null
   newContent.value = ''
-  removeFile()
+  while (selectedFiles.value.length > 0) removeFile(0)
 }
 
 function initPTR() {
