@@ -2660,8 +2660,8 @@
                     container.scrollTop = 0;
                 } else {
                     container.innerHTML = html;
-                    // 滚动到底部
-                    setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+                    // 滚动到顶部 (保持最新消息可见)
+                    setTimeout(() => container.scrollTop = 0, 100);
                 }
 
                 lucide.createIcons();

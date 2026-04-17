@@ -42,12 +42,25 @@
               </div>
             </div>
             <p v-if="m.content" class="msg-content">{{ m.content }}</p>
-            <div v-if="m.file_url" class="msg-attachment">
-              <img v-if="m.file_type === 'image'" :src="fileURL('/api/file/' + m.file_url)" class="msg-img" loading="lazy" @click="openFullscreen(fileURL('/api/file/' + m.file_url))" />
-              <a v-else @click.prevent="openBrowser(fileURL('/api/file/' + m.file_url))" href="#" class="msg-file">
-                <span class="file-icon">📄</span>
-                <span class="file-txt">{{ m.file_name || '附件' }}</span>
-              </a>
+            <div v-if="(m.attachments && m.attachments.length > 0) || m.file_url" class="msg-attachments-container">
+              <div v-if="(m.attachments || [{url: m.file_url, type: m.file_type, name: m.file_name}]).filter(a => a.type === 'image').length > 0" 
+                   class="msg-attachments-grid" 
+                   :class="'grid-' + (((m.attachments || [{url: m.file_url, type: m.file_type}]).filter(a => a.type === 'image').length >= 3) ? '9' : (((m.attachments || [{url: m.file_url, type: m.file_type}]).filter(a => a.type === 'image').length === 2) ? '4' : '1'))">
+                <img v-for="(imgAtt, idx) in (m.attachments || [{url: m.file_url, type: m.file_type, name: m.file_name}]).filter(a => a.type === 'image')" 
+                     :key="'img'+idx" 
+                     :src="fileURL('/api/file/' + imgAtt.url)" 
+                     loading="lazy" 
+                     class="msg-img-grid-item" 
+                     @click="openFullscreen(fileURL('/api/file/' + imgAtt.url))" />
+              </div>
+              <div v-for="(fileAtt, idx) in (m.attachments || [{url: m.file_url, type: m.file_type, name: m.file_name}]).filter(a => a.type !== 'image' && a.url)" 
+                   :key="'file'+idx" 
+                   class="msg-attachment non-image">
+                <a @click.prevent="openBrowser(fileURL('/api/file/' + fileAtt.url))" href="#" class="msg-file">
+                  <span class="file-icon">📄</span>
+                  <span class="file-txt">{{ fileAtt.name || '附件' }}</span>
+                </a>
+              </div>
             </div>
           </div>
         </li>
@@ -339,29 +352,40 @@ async function send() {
     }
     
     if (selectedFiles.value.length > 0) {
+      let uploadedAttachments = [];
       for (let i = 0; i < selectedFiles.value.length; i++) {
         const item = selectedFiles.value[i]
         toast(selectedFiles.value.length > 1 ? `正在上传附件 ${i+1}/${selectedFiles.value.length}…` : '正在上传附件…')
         const uploadRes = await api.uploadFile(item.file)
         
-        let payload = {}
-        payload.content = (i === 0) ? content : ''
+        let pURL = '';
+        let pName = item.file.name;
+        let pType = item.file.type.startsWith('image/') ? 'image' : 'file';
         
         if (uploadRes && uploadRes.filename) {
-          payload.file_url = uploadRes.filename
-          payload.file_name = uploadRes.orig_name || item.file.name
-          payload.file_type = uploadRes.type || (item.file.type.startsWith('image/') ? 'image' : 'file')
+          pURL = uploadRes.filename
+          pName = uploadRes.orig_name || item.file.name
+          pType = uploadRes.type || pType
         } else if (uploadRes && uploadRes.urls && uploadRes.urls.length > 0) {
-          payload.file_url = uploadRes.urls[0].url.replace('/api/file/', '')
-          payload.file_name = uploadRes.urls[0].name || item.file.name
-          payload.file_type = uploadRes.urls[0].type || 'file'
+          pURL = uploadRes.urls[0].url.replace('/api/file/', '')
+          pName = uploadRes.urls[0].name || item.file.name
+          pType = uploadRes.urls[0].type || pType
         } else if (uploadRes && uploadRes.url) { 
-          payload.file_url = uploadRes.url.replace('/api/file/', '')
-          payload.file_name = uploadRes.name || item.file.name
-          payload.file_type = item.file.type.startsWith('image/') ? 'image' : 'file'
+          pURL = uploadRes.url.replace('/api/file/', '')
+          pName = uploadRes.name || item.file.name
         }
-        await api.createMessage(payload)
+        
+        if (pURL) {
+           uploadedAttachments.push({ url: pURL, type: pType, name: pName })
+        }
       }
+      
+      let payload = { 
+        content: content,
+        attachments: uploadedAttachments
+      }
+      await api.createMessage(payload)
+      
     } else {
       let payload = { content }
       await api.createMessage(payload)
@@ -633,22 +657,42 @@ onUnmounted(() => {
 .msg-copy-btn:hover { background: #f1f5f9; color: var(--primary); }
 .msg-copy-btn:active { transform: scale(0.9); }
 
-.msg-content { 
+.msg-content {
   font-size: 15px;
-  line-height: 1.6; 
-  color: #334155;
-  word-break: break-word; 
+  line-height: 1.5;
+  color: var(--dark);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.msg-attachment { margin-top: 12px; }
-.msg-img {
-  max-width: 100%;
-  max-height: 250px;
-  border-radius: 12px;
-  object-fit: cover;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid #f1f5f9;
+.msg-attachments-container {
+  margin-top: 10px;
 }
+
+.msg-attachments-grid {
+  display: grid;
+  gap: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.grid-1 { grid-template-columns: 1fr; }
+.grid-1 .msg-img-grid-item { max-height: 280px; width: auto; max-width: 100%; border-radius: 8px; }
+.grid-4 { grid-template-columns: repeat(2, 1fr); max-width: 250px; border-radius: 8px;}
+.grid-9 { grid-template-columns: repeat(3, 1fr); max-width: 320px; border-radius: 8px;}
+.msg-img-grid-item {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  cursor: zoom-in;
+  border-radius: 6px;
+}
+
+.msg-attachment.non-image {
+  margin-top: 8px;
+  display: block;
+}
+
 .msg-file {
   font-size: 14px;
   font-weight: 500;
