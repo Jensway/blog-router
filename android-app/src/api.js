@@ -110,8 +110,9 @@ export const api = {
   async emptyTrash() {
     return request(`/api/posts/empty_trash`, { method: 'DELETE' })
   },
-  async getMessages() {
-    return request('/api/messages')
+  async getMessages(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    return request('/api/messages' + (q ? '?' + q : ''))
   },
   async createMessage(body) {
     return request('/api/messages', { method: 'POST', body: JSON.stringify(body) })

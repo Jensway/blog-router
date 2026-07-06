@@ -91,16 +91,23 @@ type Settings struct {
 	MaxUploadMB int `json:"max_upload_mb"`
 }
 
+type MsgAttachment struct {
+	URL  string `json:"url"`
+	Type string `json:"type"`
+	Name string `json:"name"`
+}
+
 // 消息广场
 // Message 结构体
 type Message struct {
-	ID        int64  `json:"id"`
-	Content   string `json:"content"`
-	Username  string `json:"username"`
-	FileURL   string `json:"file_url,omitempty"`
-	FileType  string `json:"file_type,omitempty"`
-	FileName  string `json:"file_name,omitempty"`
-	CreatedAt string `json:"created_at"`
+	ID          int64           `json:"id"`
+	Content     string          `json:"content"`
+	Username    string          `json:"username"`
+	FileURL     string          `json:"file_url,omitempty"`
+	FileType    string          `json:"file_type,omitempty"`
+	FileName    string          `json:"file_name,omitempty"`
+	Attachments []MsgAttachment `json:"attachments,omitempty"`
+	CreatedAt   string          `json:"created_at"`
 }
 
 type App struct {
@@ -213,6 +220,7 @@ func (app *App) initDB() {
 	app.db.Exec(`ALTER TABLE messages ADD COLUMN file_url TEXT DEFAULT ''`)
 	app.db.Exec(`ALTER TABLE messages ADD COLUMN file_type TEXT DEFAULT ''`)
 	app.db.Exec(`ALTER TABLE messages ADD COLUMN file_name TEXT DEFAULT ''`)
+	app.db.Exec(`ALTER TABLE messages ADD COLUMN attachments TEXT DEFAULT '[]'`)
 	app.db.Exec(`CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author)`)
 	app.db.Exec(`CREATE INDEX IF NOT EXISTS idx_posts_deleted ON posts(is_deleted)`)
 	app.db.Exec(`CREATE INDEX IF NOT EXISTS idx_attachments_post ON attachments(post_id)`)
@@ -2115,17 +2123,41 @@ func (app *App) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, _ := app.db.Query("SELECT id, content, username, file_url, file_type, file_name, created_at FROM messages ORDER BY created_at DESC LIMIT 100")
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+
+	sqlStr := "SELECT id, content, username, COALESCE(file_url, ''), COALESCE(file_type, ''), COALESCE(file_name, ''), COALESCE(attachments, '[]'), created_at FROM messages"
+	var args []interface{}
+
+	if search != "" {
+		if len([]rune(search)) > 120 {
+			search = string([]rune(search)[:120])
+		}
+		sqlStr += " WHERE (content LIKE ? OR username LIKE ?)"
+		args = append(args, "%"+search+"%", "%"+search+"%")
+	}
+
+	sqlStr += " ORDER BY created_at DESC LIMIT 100"
+
+	rows, _ := app.db.Query(sqlStr, args...)
 	defer rows.Close()
 
 	messages := []Message{}
 	for rows.Next() {
 		var m Message
-		var fileURL, fileType, fileName sql.NullString
-		rows.Scan(&m.ID, &m.Content, &m.Username, &fileURL, &fileType, &fileName, &m.CreatedAt)
+		var fileURL, fileType, fileName, attachmentsJSON sql.NullString
+		rows.Scan(&m.ID, &m.Content, &m.Username, &fileURL, &fileType, &fileName, &attachmentsJSON, &m.CreatedAt)
 		m.FileURL = fileURL.String
 		m.FileType = fileType.String
 		m.FileName = fileName.String
+		
+		if attachmentsJSON.String != "" && attachmentsJSON.String != "[]" {
+			json.Unmarshal([]byte(attachmentsJSON.String), &m.Attachments)
+		}
+		if len(m.Attachments) == 0 && m.FileURL != "" {
+			m.Attachments = []MsgAttachment{
+				{URL: m.FileURL, Type: m.FileType, Name: m.FileName},
+			}
+		}
 		messages = append(messages, m)
 	}
 	jsonResponse(w, messages)
@@ -2138,6 +2170,7 @@ func (app *App) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var content, fileURL, fileType, fileName string
+	var attachments []MsgAttachment
 
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		// 单次请求体上限：与 settings 一致，且至少 150MB（避免错误工作目录导致 settings 未加载仍能传大文件）
@@ -2161,17 +2194,20 @@ func (app *App) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 				io.Copy(dst, file)
 				dst.Close()
 				fileURL = safeName
+				attachments = append(attachments, MsgAttachment{URL: fileURL, Type: fileType, Name: fileName})
 			}
 		}
 	} else {
 		var req struct {
-			Content  string `json:"content"`
-			FileURL  string `json:"file_url"`
-			FileType string `json:"file_type"`
-			FileName string `json:"file_name"`
+			Content     string          `json:"content"`
+			FileURL     string          `json:"file_url"`
+			FileType    string          `json:"file_type"`
+			FileName    string          `json:"file_name"`
+			Attachments []MsgAttachment `json:"attachments"`
 		}
-		if err := app.decodeJSONLoose(r, &req, 64*1024); err == nil {
+		if err := app.decodeJSONLoose(r, &req, 512*1024); err == nil {
 			content = strings.TrimSpace(req.Content)
+			attachments = req.Attachments
 			if req.FileURL != "" {
 				fileURL = filepath.Base(req.FileURL) // 安全取文件名
 				fileType = req.FileType
@@ -2179,28 +2215,37 @@ func (app *App) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 				if fileType == "" {
 					fileType = getFileType(fileName)
 				}
+				if len(attachments) == 0 {
+					attachments = append(attachments, MsgAttachment{URL: fileURL, Type: fileType, Name: fileName})
+				}
 			}
 		}
 	}
 
-	if content == "" && fileURL == "" {
+	if content == "" && len(attachments) == 0 && fileURL == "" {
 		jsonError(w, "内容不能为空", http.StatusBadRequest)
 		return
 	}
-	if len([]rune(content)) > 500 {
-		content = string([]rune(content)[:500])
+	if len([]rune(content)) > 5000 {
+		content = string([]rune(content)[:5000])
+	}
+
+	attachmentsStr := "[]"
+	if len(attachments) > 0 {
+		b, _ := json.Marshal(attachments)
+		attachmentsStr = string(b)
 	}
 
 	now := nowStr()
-	result, err := app.db.Exec("INSERT INTO messages (content, username, file_url, file_type, file_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-		content, username, fileURL, fileType, fileName, now)
+	result, err := app.db.Exec("INSERT INTO messages (content, username, file_url, file_type, file_name, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		content, username, fileURL, fileType, fileName, attachmentsStr, now)
 	if err != nil {
 		jsonError(w, "发送失败", http.StatusInternalServerError)
 		return
 	}
 
 	id, _ := result.LastInsertId()
-	msg := Message{ID: id, Content: content, Username: username, FileURL: fileURL, FileType: fileType, FileName: fileName, CreatedAt: now}
+	msg := Message{ID: id, Content: content, Username: username, FileURL: fileURL, FileType: fileType, FileName: fileName, Attachments: attachments, CreatedAt: now}
 
 	app.broadcastToAll(map[string]interface{}{"type": "new_message", "data": msg})
 	jsonResponse(w, msg)
@@ -2254,12 +2299,18 @@ func (app *App) handleUpdateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var m Message
-	var fileURL, fileType, fileName sql.NullString
-	app.db.QueryRow("SELECT id, content, username, file_url, file_type, file_name, created_at FROM messages WHERE id = ?", idStr).
-		Scan(&m.ID, &m.Content, &m.Username, &fileURL, &fileType, &fileName, &m.CreatedAt)
+	var fileURL, fileType, fileName, attachmentsJSON sql.NullString
+	app.db.QueryRow("SELECT id, content, username, COALESCE(file_url, ''), COALESCE(file_type, ''), COALESCE(file_name, ''), COALESCE(attachments, '[]'), created_at FROM messages WHERE id = ?", idStr).
+		Scan(&m.ID, &m.Content, &m.Username, &fileURL, &fileType, &fileName, &attachmentsJSON, &m.CreatedAt)
 	m.FileURL = fileURL.String
 	m.FileType = fileType.String
 	m.FileName = fileName.String
+	if attachmentsJSON.String != "" && attachmentsJSON.String != "[]" {
+		json.Unmarshal([]byte(attachmentsJSON.String), &m.Attachments)
+	}
+	if len(m.Attachments) == 0 && m.FileURL != "" {
+		m.Attachments = []MsgAttachment{{URL: m.FileURL, Type: m.FileType, Name: m.FileName}}
+	}
 
 	app.broadcastToAll(map[string]interface{}{"type": "message_updated", "data": m})
 	jsonResponse(w, m)

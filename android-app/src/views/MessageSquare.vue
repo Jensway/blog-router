@@ -6,6 +6,25 @@
       <span class="ptr-text">下拉刷新</span>
     </div>
 
+    <!-- 搜索栏 -->
+    <div class="msg-search-bar">
+      <div class="msg-search-wrapper" :class="{ focused: searchFocused }">
+        <svg class="msg-search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          class="msg-search-input" 
+          placeholder="搜索消息内容或发送人…"
+          @input="onSearchInput"
+          @focus="searchFocused = true"
+          @blur="searchFocused = false"
+        />
+        <button v-if="searchQuery" class="msg-search-clear" @click="clearSearch">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
     <div class="messages-container" ref="msgContainer">
 
       <div v-if="loading && !ptrRefreshing" class="state-box">
@@ -143,6 +162,9 @@ const newContent = ref('')
 const sending = ref(false)
 const editingMsg = ref(null)
 const username = ref('')
+const searchQuery = ref('')
+const searchFocused = ref(false)
+let searchTimer = null
 
 const textInput = ref(null)
 const fileInput = ref(null)
@@ -332,7 +354,8 @@ async function load() {
   try {
     const sess = await api.session()
     username.value = sess && sess.username ? sess.username : ''
-    messages.value = await api.getMessages()
+    const params = searchQuery.value.trim() ? { search: searchQuery.value.trim() } : {}
+    messages.value = await api.getMessages(params)
   } catch (e) {
     error.value = e.message
     toast(e.message)
@@ -512,6 +535,16 @@ function initPTR() {
   }, { passive: true })
 }
 
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => load(), 300)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  load()
+}
+
 onMounted(() => {
   load()
   window.addEventListener('reloadMessagesIntent', load)
@@ -533,6 +566,57 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   background-color: var(--light);
+}
+
+/* 消息搜索栏 */
+.msg-search-bar {
+  padding: 12px 20px 8px;
+  background: var(--light);
+  flex-shrink: 0;
+}
+.msg-search-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 12px;
+  height: 40px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.msg-search-wrapper.focused {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+.msg-search-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+  margin-right: 8px;
+}
+.msg-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--dark);
+  outline: none;
+  font-family: inherit;
+}
+.msg-search-input::placeholder {
+  color: #94a3b8;
+}
+.msg-search-clear {
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
 }
 
 /* PTR Indicator */
