@@ -41,7 +41,7 @@
             <div class="msg-head">
               <div class="user-info">
                 <div class="avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
-                <span class="user">{{ m.username }}</span>
+                <span class="user" v-html="highlightText(m.username)"></span>
                 <span class="time">{{ m.created_at }}</span>
               </div>
               <div class="head-actions">
@@ -60,7 +60,7 @@
                 </button>
               </div>
             </div>
-            <p v-if="m.content" class="msg-content">{{ m.content }}</p>
+            <p v-if="m.content" class="msg-content" v-html="highlightText(m.content)"></p>
             <div v-if="(m.attachments && m.attachments.length > 0) || m.file_url" class="msg-attachments-container">
               <div v-if="(m.attachments || [{url: m.file_url, type: m.file_type, name: m.file_name}]).filter(a => a.type === 'image').length > 0" 
                    class="msg-attachments-grid" 
@@ -535,6 +535,26 @@ function initPTR() {
   }, { passive: true })
 }
 
+function escapeHtml(text) {
+  if (!text) return ''
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function highlightText(text) {
+  const escaped = escapeHtml(text)
+  const keyword = searchQuery.value.trim()
+  if (!keyword) return escaped
+  const escapedKeyword = escapeHtml(keyword)
+  const safeKeyword = escapedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp('(' + safeKeyword + ')', 'gi')
+  return escaped.replace(regex, '<mark class="search-highlight">$1</mark>')
+}
+
 function onSearchInput() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => load(), 300)
@@ -768,6 +788,15 @@ onUnmounted(() => {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 搜索高亮 */
+.msg-content :deep(.search-highlight),
+.user :deep(.search-highlight) {
+  background: rgba(250, 204, 21, 0.4);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .msg-attachments-container {
